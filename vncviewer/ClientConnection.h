@@ -41,7 +41,7 @@
 #include <zstd.h>
 #else
 #include "../zlib/zlib.h"
-#include "../zstd-1.4.4/lib/zstd.h"
+#include "../zstd/lib/zstd.h"
 #endif
 
 extern "C"
@@ -133,6 +133,7 @@ struct BitmapInfo {
 };
 
 namespace rdr { class InStream; class FdInStream; class ZlibInStream; class xzInStream; class ZstdInStream; }
+typedef BOOL(WINAPI* PFN_AdjustWindowRectExForDpi) (LPRECT, DWORD, BOOL, DWORD, UINT);
 
 class ClientConnection  : public omni_thread
 {
@@ -193,10 +194,10 @@ public:
 	int m_cliwidth, m_cliheight;
 	void WriteExact(char *buf, int bytes); //adzm 2010-09
 	void WriteExactFT(char *buf, int bytes);
+	void ResizeToolbar(RECT& rect);
 
 private:
 	CRITICAL_SECTION crit;
-	int MouseOldX, MouseOldY;
 	UltraVncZ *ultraVncZlib;
 	UltraVncZ ultraVncZTight[4];
 	Fps fps;
@@ -266,7 +267,6 @@ private:
 	
 	void SetupPixelFormat();
 	void SetFormatAndEncodings();
-	void SendSetPixelFormat(rfbPixelFormat newFormat);
 
 	// adzm 2010-09
 	void HandleFramebufferUpdateRequest(WPARAM wParam, LPARAM lParam);
@@ -314,9 +314,14 @@ private:
 	int initialupdate_counter;
 	void ReadScreenUpdate();
 	void Update(RECT *pRect);
-	void SizeWindow(bool reconnect = false);
+	bool IsOnlyOneMonitor();
+	void SizeWindow(bool noPosChange = true, bool noSizeChange = false);
 	bool ScrollScreen(int dx, int dy, bool absolute = false);
 	void UpdateScrollbars();
+	void AddRemoveScrollbars(HWND hwnd, RECT Rtb);
+	void Scollbar_wm_sizing(WPARAM wParam, LPARAM lParam);
+	void Scollbar_wm_siz(HWND hwnd);
+	void Scrollbar_RecalculateSize(HWND hwnd);
     
 	void ReadRawRect(rfbFramebufferUpdateRectHeader *pfburh);
 	void ReadUltraRect(rfbFramebufferUpdateRectHeader *pfburh);
@@ -343,6 +348,7 @@ private:
 	void saveScreenPosition();
 	void restoreScreenPosition();
 	RECT mainRect;
+	bool saveScreenPositionOK;
 	void RealiseFullScreenMode();
 	void BorderlessMode();
 	bool BumpScroll(int x, int y);
@@ -824,11 +830,21 @@ private:
 	jpeg_source_mgr m_jpegSrcManager;
 	bool desktopsize_requested;
 	int ShowToolbar;
+	bool ExtDesktop;
+	int prevMouseX;
+	int prevMousey;
+	DWORD prevMousekeyflags;
+	UINT prevMousemsg;
 
-
+	UINT m_Dpi;
+	UINT m_DpiOld;
+	bool m_DpiMove;
+	HMODULE hUser32;
+	PFN_AdjustWindowRectExForDpi adjustWindowRectExForDpi;
 public:
 	// RFB settings
 	VNCOptions m_opts;
+	bool m_FullScreenNotDone;
 	int m_autoReconnect;
 	int reconnectcounter;
 	void DoConnection(bool reconnect = false);
@@ -839,6 +855,9 @@ public:
 	void ReadExact(char *buf, int bytes);
 	bool new_ultra_server;
 	void Save_Latest_Connection();	
+	bool tbWM_Set;
+	RECT tbWM_rect;
+
 };
 
 // Some handy classes for temporary GDI object selection
@@ -909,22 +928,6 @@ public:
                 (int) ((( *(CARD32 *)(p) >> rs) & rm) * 255 / rm), \
                 (int) ((( *(CARD32 *)(p) >> gs) & gm) * 255 / gm), \
                 (int) ((( *(CARD32 *)(p) >> bs) & bm) * 255 / bm) ))
-
-// The following may be faster if you already have a pixel value of the appropriate size
-#define COLOR_FROM_PIXEL8(p) (PALETTERGB( \
-                (int) (((p >> rs) & rm) * 255 / rm), \
-                (int) (((p >> gs) & gm) * 255 / gm), \
-                (int) (((p >> bs) & bm) * 255 / bm) ))
-
-#define COLOR_FROM_PIXEL16(p) (PALETTERGB( \
-                (int) ((( p >> rs) & rm) * 255 / rm), \
-                (int) ((( p >> gs) & gm) * 255 / gm), \
-                (int) ((( p >> bs) & bm) * 255 / bm) ))
-
-#define COLOR_FROM_PIXEL32(p) (PALETTERGB( \
-                (int) (((p >> rs) & rm) * 255 / rm), \
-                (int) (((p >> gs) & gm) * 255 / gm), \
-                (int) (((p >> bs) & bm) * 255 / bm) ))
 
 #define SETPIXEL(b,x,y,c) SetPixelV((b),(x),(y),(c))
 

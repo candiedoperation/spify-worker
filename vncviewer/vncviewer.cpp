@@ -38,6 +38,7 @@
 
 #include "omnithread/omnithread.h"
 #include "VNCviewerApp32.h"
+#include "shellscalingapi.h"
 
 // All logging is done via the log object
 Log vnclog;
@@ -344,21 +345,45 @@ static BOOL read_reg_string(HKEY key, char* sub_key, char* val_name, LPBYTE data
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR szCmdLine, int iCmdShow)
 {
+	HMODULE hUser32 = LoadLibrary(_T("user32.dll"));
+	HMODULE shcoreDLL = LoadLibrary("SHCORE.DLL");
+	//Min  Vista
+	typedef BOOL(*SetProcessDPIAwareFunc)();
+	SetProcessDPIAwareFunc setDPIAwareF = NULL;
+	//Min Windows 8.1
+	typedef HRESULT(*SetProcessDpiAwarenessFunc) (PROCESS_DPI_AWARENESS);
+	SetProcessDpiAwarenessFunc setDPIpiAwarenessF = NULL;
+	//Min Windows 10, version 1703
+	typedef HRESULT(*SetProcessDpiAwarenessContextFunc) (DPI_AWARENESS_CONTEXT);
+	SetProcessDpiAwarenessContextFunc SetProcessDpiAwarenessContextF = NULL;
+	if (hUser32) {
+		setDPIAwareF = (SetProcessDPIAwareFunc)GetProcAddress(hUser32, "SetProcessDPIAware");
+		SetProcessDpiAwarenessContextF = (SetProcessDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetProcessDpiAwarenessContext");
+	}
+	if (shcoreDLL) {
+		setDPIpiAwarenessF =  (SetProcessDpiAwarenessFunc)GetProcAddress(shcoreDLL, "SetProcessDpiAwareness");
+	}
 
-HMODULE hUser32 = LoadLibrary(_T("user32.dll"));
-typedef BOOL(*SetProcessDPIAwareFunc)();
-SetProcessDPIAwareFunc setDPIAware=NULL;
-if (hUser32) setDPIAware = (SetProcessDPIAwareFunc)GetProcAddress(hUser32, "SetProcessDPIAware");
-if (setDPIAware) setDPIAware();
-if (hUser32) FreeLibrary(hUser32);
+	HRESULT hr = S_FALSE;
+	if (SetProcessDpiAwarenessContextF) 
+		hr = SetProcessDpiAwarenessContextF(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+	if (hr != S_OK && setDPIpiAwarenessF)
+		hr = setDPIpiAwarenessF(PROCESS_PER_MONITOR_DPI_AWARE);
+	if (hr != S_OK && (setDPIAwareF))
+		setDPIAwareF();
+
+	if (hUser32) 
+		FreeLibrary(hUser32);
+	if (shcoreDLL) 
+		FreeLibrary(shcoreDLL);
 
 #ifdef CRASHRPT
 	CR_INSTALL_INFO info;
 	memset(&info, 0, sizeof(CR_INSTALL_INFO));
 	info.cb = sizeof(CR_INSTALL_INFO);
 	info.pszAppName = _T("UVNC");
-	info.pszAppVersion = _T("1.3.2");
-	info.pszEmailSubject = _T("UVNC viewer 1.3.2 Error Report");
+	info.pszAppVersion = _T("1.3.4");
+	info.pszEmailSubject = _T("UVNC viewer 1.3.4 Error Report");
 	info.pszEmailTo = _T("uvnc@skynet.be");
 	info.uPriorities[CR_SMAPI] = 1; // Third try send report over Simple MAPI    
 	// Install all available exception handlers

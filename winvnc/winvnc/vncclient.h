@@ -73,6 +73,8 @@ typedef std::list<vncClientId> vncClientList;
 // adzm - 2010-07 - Extended clipboard
 #include "common/Clipboard.h"
 
+#include "MouseSimulator.h"
+
 // The vncClient class itself
 typedef UINT (WINAPI *pSendinput)(UINT,LPINPUT,INT);
 #define SPI_GETMOUSESPEED         0x0070
@@ -140,6 +142,7 @@ protected:
 	omni_condition* m_sync_sig;
 	BOOL m_active;
 	BOOL m_enable;
+	bool first_run;
 };
 
 class vncClient
@@ -277,6 +280,13 @@ public:
 	void Clear_Update_Tracker();
 	void TriggerUpdate();
 	void UpdateCursorShape();
+	void setTiming(DWORD value) {
+		m_timing = value;
+	}
+	DWORD getTiming() {
+		return m_timing;
+	}
+	bool forceBlacklist;
 
 	// adzm 2009-07-05 - repeater IDs
 	void SetRepeaterID(char* szid)
@@ -487,6 +497,8 @@ public:
 	//int Totalsend;
 	BOOL client_settings_passed;
 	bool initialCapture_done;
+	void SetHasMouse(bool has_mouse);
+	bool ask_mouse;
 	bool sendingUpdate;
 	bool		m_Autoreconnect;
 	// The socket
@@ -494,6 +506,8 @@ public:
 
 	// Internal stuffs
 protected:
+	bool has_mouse;
+	SimulateCursor* simulateCursor;
 	// Per-client settings
 	BOOL			m_IsLoopback;
 	BOOL			m_keyboardenabled;
@@ -508,6 +522,8 @@ protected:
 	vncEncodeMgr	m_encodemgr;
 	bool			m_singleExtendMode;
 	bool			m_firstExtDesktop;
+	bool			m_firstExtDesktopIncremental;
+	DWORD			m_timing;
 
 	// The server
 	vncServer		*m_server;

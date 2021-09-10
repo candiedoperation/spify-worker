@@ -11,11 +11,19 @@
 #define IDR_CIPHER_CLASS                121
 #define IDR_CRYPTOUTILS_CLASS           123
 #define IDR_IDEACIPHER_CLASS            124
+#define IDC_CURSOR1                     129
+#define IDC_CURSOR2                     130
 #define IDD_ABOUT                       131
 #define IDB_VNCLOGO                     132
+#define IDC_CURSOR4                     132
+#define IDC_CURSORBLANK                 133
 #define IDI_FLASH                       134
+#define IDC_CURSOR6                     134
 #define IDD_OUTGOING_CONN               135
+#define IDC_CURSOR7                     135
 #define IDD_ACCEPT_CONN                 136
+#define IDC_CURSOR8                     136
+#define IDC_CURSOR9                     137
 #define IDD_PATHS                       138
 #define IDB_LOGO64                      139
 #define IDD_TEXTCHAT_DLG                140
@@ -124,6 +132,7 @@
 #define IDC_VIRTUAL                     1068
 #define IDC_CONNECT_XDMCP               1069
 #define IDC_BLANK                       1070
+#define IDC_CURSOR3                     1070
 #define IDC_BLANK2                      1071
 #define IDC_TURBOMODE                   1075
 #define IDC_SEND_B                      1078
@@ -216,6 +225,11 @@
 #define IDC_STATICFPS5                  1151
 #define IDC_STATICFPS60                 1152
 #define IDC_STATICFPS                   1152
+#define IDC_MAXVIEWERS                  1153
+#define IDC_MAXREFUSE                   1154
+#define IDC_MAXDISCONNECT               1155
+#define IDC_CHECK8                      1156
+#define IDC_COLLABO                     1156
 #define IDC_SHOWOPTIONS                 2032
 #define IDC_BUTTON_EXPAND               2048
 #define IDC_FINGER                      9000
@@ -307,7 +321,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        176
 #define _APS_NEXT_COMMAND_VALUE         40030
-#define _APS_NEXT_CONTROL_VALUE         1153
+#define _APS_NEXT_CONTROL_VALUE         1157
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

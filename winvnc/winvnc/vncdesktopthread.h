@@ -69,6 +69,7 @@ public:
 		g_DesktopThread_running=true;
 
 		m_lLastMouseMoveTime = 0L;
+		m_lLastUpdate = 0L;
 		
 		CHANGEWINDOWMESSAGEFILTER pfnFilter = NULL;
 		if (hUser32)
@@ -130,6 +131,7 @@ protected:
 	DWORD newtick,oldtick,oldtick2;
 
 	DWORD m_lLastMouseMoveTime;
+	DWORD m_lLastUpdate;
 	CProcessorUsage usage;
 	short cpuUsage;
 	DWORD MIN_UPDATE_INTERVAL;

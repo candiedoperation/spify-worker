@@ -62,3 +62,31 @@ winvnc/omnithread/Release/
 vncviewer/Release/
 repeater/.vs/
 winvnc/winvnc/VTune Profiler Results/
+Files/
+uvnc_settings2/.vs/
+uvnc_settings2/uvnc_settings/Release/
+uvnc_settings2/uvnc_settings/x64/Release/uvnc_settings.exe.recipe
+vncviewer/My Inspector Results - vncviewer/
+winvnc/GPUCache/
+vncviewer/GPUCache/
+GPUCache/
+winvnc/UltraVnc/.vs/
+uvnc_settings2/uvnc_settings/
+winvnc/x64/
+*FileListAbsolute.txt
+addon/ms-logon/authadm/x64/
+addon/ms-logon/authSSP/x64/
+addon/ms-logon/ldapauth/x64/Release/ldapauth.dll
+addon/ms-logon/ldapauth/x64/
+addon/ms-logon/ldapauth9x/x64/
+addon/ms-logon/ldapauthNT4/x64/
+addon/ms-logon/workgrpdomnt4/x64/
+winvnc/createpassword/x64/
+setpasswd/setpasswd/Debug/
+winvnc/createpassword/Debug/
+libjpeg-turbo-win/DebugLib-Static/
+*.recipe
+*.pch
+*.idb
+addon/ms-logon/logging/x64/
+*.suo

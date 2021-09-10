@@ -99,7 +99,7 @@ PixelCaptureEngine::~PixelCaptureEngine()
 
 PixelCaptureEngine::PixelCaptureEngine()
 {
-	if (VNCOS.OS_VISTA || VNCOS.OS_WIN7 || VNCOS.OS_WIN8 || VNCOS.OS_WIN10) 
+	if (VNC_OSVersion::getInstance()->OS_VISTA || VNC_OSVersion::getInstance()->OS_WIN7 || VNC_OSVersion::getInstance()->OS_WIN8 || VNC_OSVersion::getInstance()->OS_WIN10) 
 		m_bIsVista = true;
 	else
 		m_bIsVista = false;
@@ -276,7 +276,7 @@ bool vncDesktop::FastDetectChanges(rfb::Region2D &rgn, rfb::Rect &rect, int nZon
 
 	}
 
-	PixelEngine.PixelCaptureEngineInit(m_hrootdc_Desktop, m_hmemdc, m_membitmap, VNCOS.CaptureAlphaBlending() && !m_Black_window_active,
+	PixelEngine.PixelCaptureEngineInit(m_hrootdc_Desktop, m_hmemdc, m_membitmap, VNC_OSVersion::getInstance()->CaptureAlphaBlending() && !m_Black_window_active,
 		m_DIBbits, m_scrinfo.format.bitsPerPixel / 8, m_bytesPerRow, m_ScreenOffsetx, m_ScreenOffsety);
 	// We test one zone at a time 
 	// vnclog.Print(LL_INTINFO, VNCLOG("### Polling Grid %d - SubGrid %d\n"), nZone, m_nGridCycle); 
@@ -506,8 +506,7 @@ vncDesktop::vncDesktop()
 	g_Desktop_running = true;
 	hUser32 = LoadLibrary("USER32");
 	if (hUser32) pbi = (pBlockInput)GetProcAddress(hUser32, "BlockInput");
-	no_default_desktop = false;
-	DriverWantedSet = false;
+	no_default_desktop = false;	
 	can_be_hooked = false;
 
 	show_all_monitors = true;
@@ -723,10 +722,10 @@ vncDesktop::Startup()
 
 	// Modif rdv@2002 - v1.1.x - videodriver
 	vnclog.Print(LL_INTINFO, VNCLOG("InitVideo driver Called\n"));
-	if (FALSE != DriverWantedSet) {
-		m_server->Driver(DriverWanted);
-		m_server->Hook(HookWanted);
-		DriverWantedSet = FALSE;
+	if (FALSE != m_server->DriverWantedSet) {
+		m_server->Driver(m_server->DriverWanted);
+		m_server->Hook(m_server->HookWanted);
+		m_server->DriverWantedSet = FALSE;
 	}
 	no_default_desktop = false;
 	if (m_server->Driver()) {
@@ -871,16 +870,13 @@ vncDesktop::Shutdown()
 	}
 
 	m_DIBbits = NULL;
+	m_hcursor = NULL;
+	m_hOldcursor = NULL;
 
-	if (m_hcursor)
+	if (m_hdefcursor)
 	{
-		DeleteObject(m_hcursor);
-		m_hcursor = NULL;
-	}
-	if (m_hOldcursor)
-	{
-		DeleteObject(m_hOldcursor);
-		m_hOldcursor = NULL;
+		DeleteObject(m_hdefcursor);
+		m_hdefcursor = NULL;
 	}
 	// Modif rdv@2002 - v1.1.x - videodriver
 	ShutdownVideoDriver();
@@ -1237,6 +1233,8 @@ vncDesktop::SetPixFormat()
 	m_scrinfo.framebufferHeight = (CARD16)(m_bmrect.br.y - ((m_bmrect.tl.y < 0) ? 0 : m_bmrect.tl.y));	// Swap endian before actually sending
 	m_scrinfo.format.bitsPerPixel = (CARD8)m_bminfo.bmi.bmiHeader.biBitCount;
 	m_scrinfo.format.depth = (CARD8)m_bminfo.bmi.bmiHeader.biBitCount;
+	if (m_scrinfo.format.depth == 32)
+		m_scrinfo.format.depth = 24;
 
 	// Calculate the number of bytes per row
 	m_bytesPerRow = m_scrinfo.framebufferWidth * m_scrinfo.format.bitsPerPixel / 8;
@@ -1476,7 +1474,7 @@ vncDesktop::Init(vncServer *server)
 	// Load in the arrow cursor
 	m_hdefcursor = LoadCursor(NULL, IDC_ARROW);
 	m_hcursor = m_hdefcursor;
-	m_hOldcursor = m_hdefcursor; //sf@2002
+	m_hOldcursor = NULL; //sf@2002
 
 	// Spawn a thread to handle that window's message queue
 	vncDesktopThread *thread = new vncDesktopThread;
@@ -1685,7 +1683,7 @@ vncDesktop::WriteMessageOnScreenPreConnect(BYTE *scrBuff, UINT scrBuffSize)
 
 	HFONT hFont, hOldFont;
 	SetRect(&rect, 0, 10, 640, 640);
-    char *tout = "UVNC experimental server 1.3.2 pre-connect window \n";
+    char *tout = "UVNC experimental server pre-connect window \n";
 	DrawText(m_hmemdc, tout, (int)strlen(tout), &rect, DT_CENTER);
 
 
@@ -1755,7 +1753,7 @@ vncDesktop::CaptureScreen(const rfb::Rect &rect, BYTE *scrBuff, UINT scrBuffSize
 				m_hrootdc_Desktop,
 				rect.tl.x + m_ScreenOffsetx,
 				rect.tl.y + m_ScreenOffsety,
-				((VNCOS.CaptureAlphaBlending() || m_server->AutoCapt() == 2) && !m_Black_window_active) ? (CAPTUREBLT | SRCCOPY) : SRCCOPY
+				((VNC_OSVersion::getInstance()->CaptureAlphaBlending() || m_server->AutoCapt() == 2) && !m_Black_window_active) ? (CAPTUREBLT | SRCCOPY) : SRCCOPY
 			);
 		}
 		else
@@ -1769,7 +1767,7 @@ vncDesktop::CaptureScreen(const rfb::Rect &rect, BYTE *scrBuff, UINT scrBuffSize
 				rect.tl.y,
 				(rect.br.x - rect.tl.x),
 				(rect.br.y - rect.tl.y),
-				m_hrootdc_Desktop, rect.tl.x + xoffset, rect.tl.y + yoffset, ((VNCOS.CaptureAlphaBlending() || m_server->AutoCapt() == 2) && !m_Black_window_active) ? (CAPTUREBLT | SRCCOPY) : SRCCOPY);
+				m_hrootdc_Desktop, rect.tl.x + xoffset, rect.tl.y + yoffset, ((VNC_OSVersion::getInstance()->CaptureAlphaBlending() || m_server->AutoCapt() == 2) && !m_Black_window_active) ? (CAPTUREBLT | SRCCOPY) : SRCCOPY);
 		}
 		/*#if defined(_DEBUG)
 			DWORD e = GetTimeFunction() - t;
@@ -2313,13 +2311,15 @@ BOOL vncDesktop::InitVideoDriver()
 		if (m_screenCapture != NULL) delete m_screenCapture;
 
 	}
-	if (IsWindows8OrGreater() && m_server->DeskDupEngine())
+	if (IsWindows8OrGreater() && !VNC_OSVersion::getInstance()->OS_WINPE && m_server->DeskDupEngine())
 	{
 		int a = 0;
+		vnclog.Print(LL_INTERR, VNCLOG("Try ddengine\n"));
 		m_screenCapture = new DeskDupEngine;
 	}
 	else
 	{
+		vnclog.Print(LL_INTERR, VNCLOG("Try mirrordriver\n"));
 		m_screenCapture = new VideoDriver;
 	}
 
@@ -2351,9 +2351,9 @@ BOOL vncDesktop::InitVideoDriver()
 			m_hookdll = true;
 			// sf@2002 - Necessary for the following InitHookSettings() call
 			// Remember old states
-			DriverWantedSet = true;
-			DriverWanted = m_server->Driver();
-			HookWanted = m_server->Hook();
+			m_server->DriverWantedSet = true;
+			m_server->DriverWanted = m_server->Driver();
+			m_server->HookWanted = m_server->Hook();
 			m_server->Driver(false);
 			m_server->Hook(true);
 			m_server->PollFullScreen(true);
@@ -2420,7 +2420,7 @@ void vncDesktop::SethookMechanism(BOOL hookall, BOOL hookdriver)
 	else On_Off_hookdll = false;
 	if (old_On_Off_hookdll != On_Off_hookdll) Hookdll_Changed = true;
 	else Hookdll_Changed = false;
-	if (VNCOS.OS_VISTA || VNCOS.OS_WIN7 || VNCOS.OS_WIN8 || VNCOS.OS_WIN10) Hookdll_Changed = true;
+	if (VNC_OSVersion::getInstance()->OS_VISTA || VNC_OSVersion::getInstance()->OS_WIN7 || VNC_OSVersion::getInstance()->OS_WIN8 || VNC_OSVersion::getInstance()->OS_WIN10) Hookdll_Changed = true;
 
 	vnclog.Print(LL_INTERR, VNCLOG("Sethook_restart_wanted hook=%d driver=%d \r\n"), m_hookdll, m_hookdriver);
 	if (Hookdll_Changed)

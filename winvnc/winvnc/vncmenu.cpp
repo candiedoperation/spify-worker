@@ -375,68 +375,20 @@ vncMenu::vncMenu(vncServer *server)
 //	m_winvnc_icon = LoadIcon(hAppInstance, MAKEINTRESOURCE(IDI_WINVNC));
 //	m_flash_icon = LoadIcon(hAppInstance, MAKEINTRESOURCE(IDI_FLASH));
 	{
-	osvi.dwOSVersionInfoSize = sizeof(osvi);
-	GetVersionEx(&osvi);
-
-	if (osvi.dwPlatformId==VER_PLATFORM_WIN32_NT)
-		{
-		  if(osvi.dwMajorVersion==5 && osvi.dwMinorVersion>=1)
-		  {
-			m_winvnc_icon=(HICON)LoadImage(NULL, "icon1.ico", IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
-                        GetSystemMetrics(SM_CYSMICON), LR_LOADFROMFILE|LR_DEFAULTCOLOR);
-			m_flash_icon=(HICON)LoadImage(NULL, "icon2.ico", IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
-                        GetSystemMetrics(SM_CYSMICON), LR_LOADFROMFILE|LR_DEFAULTCOLOR);
-			// [v1.0.2-jp1 fix]
-			//if (!m_winvnc_icon) m_winvnc_icon=(HICON)LoadImage(hAppInstance, MAKEINTRESOURCE(IDI_WINVNC), IMAGE_ICON,
-			if (!m_winvnc_icon) m_winvnc_icon=(HICON)LoadImage(hInstResDLL, MAKEINTRESOURCE(IDI_WINVNC), IMAGE_ICON,
-                        GetSystemMetrics(SM_CXSMICON),
-                        GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
-			// [v1.0.2-jp1 fix]
-			//if (!m_flash_icon) m_flash_icon=(HICON)LoadImage(hAppInstance, MAKEINTRESOURCE(IDI_FLASH), IMAGE_ICON,
- 			if (!m_flash_icon) m_flash_icon=(HICON)LoadImage(hInstResDLL, MAKEINTRESOURCE(IDI_FLASH), IMAGE_ICON,
-                       GetSystemMetrics(SM_CXSMICON),
-                        GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
-			
-		  }
-		  else
-		 {
-			  m_winvnc_icon=(HICON)LoadImage(NULL, "icon1.ico", IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
-                        GetSystemMetrics(SM_CYSMICON), LR_LOADFROMFILE|LR_VGACOLOR);
-				m_flash_icon=(HICON)LoadImage(NULL, "icon2.ico", IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
-                        GetSystemMetrics(SM_CYSMICON), LR_LOADFROMFILE|LR_VGACOLOR);
-				
-			  // [v1.0.2-jp1 fix]
-			  //if (!m_winvnc_icon)m_winvnc_icon=(HICON)LoadImage(hAppInstance, MAKEINTRESOURCE(IDI_WINVNC), IMAGE_ICON,
- 			  if (!m_winvnc_icon)m_winvnc_icon=(HICON)LoadImage(hInstResDLL, MAKEINTRESOURCE(IDI_WINVNC), IMAGE_ICON,
-                       GetSystemMetrics(SM_CXSMICON),
-                        GetSystemMetrics(SM_CYSMICON), LR_VGACOLOR);
-			 // [v1.0.2-jp1 fix]
-			 //if (!m_flash_icon)m_flash_icon=(HICON)LoadImage(hAppInstance, MAKEINTRESOURCE(IDI_FLASH), IMAGE_ICON,
- 			 if (!m_flash_icon)m_flash_icon=(HICON)LoadImage(hInstResDLL, MAKEINTRESOURCE(IDI_FLASH), IMAGE_ICON,
-                       GetSystemMetrics(SM_CXSMICON),
-                        GetSystemMetrics(SM_CYSMICON), LR_VGACOLOR);
-			 
-		  }
-		 }
-	else
-		 {
-				m_winvnc_icon=(HICON)LoadImage(NULL, "icon1.ico", IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
-                        GetSystemMetrics(SM_CYSMICON), LR_LOADFROMFILE|LR_VGACOLOR);
-				m_flash_icon=(HICON)LoadImage(NULL, "icon2.ico", IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
-                        GetSystemMetrics(SM_CYSMICON), LR_LOADFROMFILE|LR_VGACOLOR);
-				
-				// [v1.0.2-jp1 fix]
-				//if (!m_winvnc_icon)m_winvnc_icon=(HICON)LoadImage(hAppInstance, MAKEINTRESOURCE(IDI_WINVNC), IMAGE_ICON,
-				if (!m_winvnc_icon)m_winvnc_icon=(HICON)LoadImage(hInstResDLL, MAKEINTRESOURCE(IDI_WINVNC), IMAGE_ICON,
-                       GetSystemMetrics(SM_CXSMICON),
-                        GetSystemMetrics(SM_CYSMICON), LR_VGACOLOR);
-				// [v1.0.2-jp1 fix]
-				//if (!m_flash_icon)m_flash_icon=(HICON)LoadImage(hAppInstance, MAKEINTRESOURCE(IDI_FLASH), IMAGE_ICON,
-				if (!m_flash_icon)m_flash_icon=(HICON)LoadImage(hInstResDLL, MAKEINTRESOURCE(IDI_FLASH), IMAGE_ICON,
-                        GetSystemMetrics(SM_CXSMICON),
-                        GetSystemMetrics(SM_CYSMICON), LR_VGACOLOR);
-				
-		  }
+		m_winvnc_icon=(HICON)LoadImage(NULL, "icon1.ico", IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
+					GetSystemMetrics(SM_CYSMICON), LR_LOADFROMFILE|LR_DEFAULTCOLOR);
+		m_flash_icon=(HICON)LoadImage(NULL, "icon2.ico", IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
+					GetSystemMetrics(SM_CYSMICON), LR_LOADFROMFILE|LR_DEFAULTCOLOR);
+		// [v1.0.2-jp1 fix]
+		//if (!m_winvnc_icon) m_winvnc_icon=(HICON)LoadImage(hAppInstance, MAKEINTRESOURCE(IDI_WINVNC), IMAGE_ICON,
+		if (!m_winvnc_icon) m_winvnc_icon=(HICON)LoadImage(hInstResDLL, MAKEINTRESOURCE(IDI_WINVNC), IMAGE_ICON,
+					GetSystemMetrics(SM_CXSMICON),
+					GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
+		// [v1.0.2-jp1 fix]
+		//if (!m_flash_icon) m_flash_icon=(HICON)LoadImage(hAppInstance, MAKEINTRESOURCE(IDI_FLASH), IMAGE_ICON,
+ 		if (!m_flash_icon) m_flash_icon=(HICON)LoadImage(hInstResDLL, MAKEINTRESOURCE(IDI_FLASH), IMAGE_ICON,
+					GetSystemMetrics(SM_CXSMICON),
+					GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);					 
 	}
 
 	// Load the popup menu
@@ -451,6 +403,7 @@ vncMenu::vncMenu(vncServer *server)
 
 vncMenu::~vncMenu()
 {
+	KillTimer(m_hwnd, 1);
 	vnclog.Print(LL_INTERR, VNCLOG("vncmenu killed\n"));
 
 	// adzm 2009-07-05 - Tray icon balloon tips
@@ -511,7 +464,7 @@ vncMenu::AddTrayIcon()
 			IsIconSet=false;
 			if (!m_server->GetDisableTrayIcon()) 
 				IconFaultCounter++;
-			m_server->TriggerUpdate();
+			//m_server->TriggerUpdate();
 			return;
 		}
 
@@ -529,7 +482,7 @@ vncMenu::AddTrayIcon()
 			}
 			if (m_server->RemoveAeroEnabled()) //PGM @ Advantig
 				DisableAero(); //PGM @ Advantig
-			VNCOS.SetAeroState();
+			VNC_OSVersion::getInstance()->SetAeroState();
 		} //PGM @ Advantig
 	}
 }
@@ -887,43 +840,55 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lP
 	switch (iMsg) {
 	// Every five seconds, a timer message causes the icon to update
 	case WM_TIMER:
-		// sf@2007 - Can't get the WTS_CONSOLE_CONNECT message work properly for now..
-		// So use a hack instead
-        // jdp reread some ini settings
-        _this->m_properties.ReloadDynamicSettings();
+		if (wParam == 1) {
+			// sf@2007 - Can't get the WTS_CONSOLE_CONNECT message work properly for now..
+			// So use a hack instead
+			// jdp reread some ini settings
+			_this->m_properties.ReloadDynamicSettings();
 
-		
-		if (G_1111==true && _this->IsIconSet==true) { // G_1111==true --> reconnect
-			vnclog.Print(LL_INTERR, VNCLOG("Add client reconnect from timer\n"));
-			G_1111=false;
-			PostMessage(hwnd,MENU_ADD_CLIENT_MSG,1111,1111);		
-		}
 
-		if (_this->m_server->RunningFromExternalService()) {
-			strcpy_s(newuser,"");
-			if (vncService::CurrentUser((char *) &newuser, sizeof(newuser))) {
-				// Check whether the user name has changed!
-				if (_stricmp(newuser, _this->m_username) != 0 || ( _this->IconFaultCounter>2 && !_this->m_server->GetDisableTrayIcon())) {
-					Sleep(1000);
-					vnclog.Print(LL_INTINFO,VNCLOG("user name has changed\n"));
-					// User has changed!
-					strcpy_s(_this->m_username, newuser);
-					// Order impersonation thread killing
-					PostQuitMessage(0);
-					break;
+			if (G_1111 == true && _this->IsIconSet == true) { // G_1111==true --> reconnect
+				vnclog.Print(LL_INTERR, VNCLOG("Add client reconnect from timer\n"));
+				G_1111 = false;
+				PostMessage(hwnd, MENU_ADD_CLIENT_MSG, 1111, 1111);
+			}
+
+			if (_this->m_server->RunningFromExternalService()) {
+				strcpy_s(newuser, "");
+				if (vncService::CurrentUser((char*)&newuser, sizeof(newuser))) {
+					// Check whether the user name has changed!
+					if (_stricmp(newuser, _this->m_username) != 0 || (_this->IconFaultCounter > 2 && !_this->m_server->GetDisableTrayIcon())) {
+						Sleep(1000);
+						vnclog.Print(LL_INTINFO, VNCLOG("user name has changed\n"));
+						// User has changed!
+						strcpy_s(_this->m_username, newuser);
+						// Order impersonation thread killing
+						PostQuitMessage(0);
+						break;
+					}
 				}
 			}
-		}
 
-		// *** HACK for running servicified
-		if (vncService::RunningAsService()) {
-			// Attempt to add the icon if it's not already there
-			_this->AddTrayIcon();
-			// Trigger a check of the current user
-			PostMessage(hwnd, WM_USERCHANGED, 0, 0);
+			// *** HACK for running servicified
+			if (vncService::RunningAsService()) {
+				// Attempt to add the icon if it's not already there
+				_this->AddTrayIcon();
+				// Trigger a check of the current user
+				PostMessage(hwnd, WM_USERCHANGED, 0, 0);
+			}
+			// Update the icon
+			_this->FlashTrayIcon(_this->m_server->AuthClientCount() != 0);
 		}
-		// Update the icon
-		_this->FlashTrayIcon(_this->m_server->AuthClientCount() != 0);
+		else if (wParam == 2) {
+			if (_this->m_server->RunningFromExternalService() && _this->m_server->GetRdpmode()) {
+				fShutdownOrdered = TRUE;
+				vnclog.Print(LL_INTINFO, VNCLOG("RdpMode auto 30s auto reset \n"));
+				_this->m_server->KillAuthClients();
+				if (_this->FunctionWTSUnRegisterSessionNotification)
+					_this->FunctionWTSUnRegisterSessionNotification(hwnd);
+				PostMessage(hwnd, WM_CLOSE, 0, 0);
+			}
+		}
 		break;
 
 		// DEAL WITH NOTIFICATIONS FROM THE SERVER:
@@ -944,7 +909,8 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lP
 			}
 			if (_this->m_server->RemoveAeroEnabled()) // Moved, redundant if //PGM @ Advantig
 				DisableAero(); // Moved, redundant if //PGM @ Advantig
-			VNCOS.SetAeroState();
+			VNC_OSVersion::getInstance()->SetAeroState();
+			KillTimer(hwnd, 2);
 		} else {
 			if (_this->m_server->RemoveAeroEnabled()) // Moved, redundant if //PGM @ Advantig
 				ResetAero(); // Moved, redundant if //PGM @ Advantig
@@ -959,6 +925,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lP
 			if (_this->m_server->RemoveFontSmoothingEnabled()) {
 				RestoreFontSmoothing();
 			}
+			SetTimer(hwnd, 2, 30000, NULL);
 		}
 		return 0;
 
@@ -1460,14 +1427,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lP
 			return 0;
 		}
 		
-	case WM_CLOSE:
-		
-		// Only accept WM_CLOSE if the logged on user has AllowShutdown set
-		// Error this clock the service restart.
-		/*if (!_this->m_properties.AllowShutdown())
-		{
-			return 0;
-		}*/
+	case WM_CLOSE:				
 		// tnatsni Wallpaper fix
 		if (_this->m_server->RemoveWallpaperEnabled())
 			RestoreWallpaper();
@@ -1500,28 +1460,21 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lP
 				vnclog.Print(LL_INTINFO, VNCLOG("KillAuthClients() ID_CLOSE \n"));
 				_this->m_server->OS_Shutdown=true;
 				_this->m_server->KillAuthClients();				
-				PostMessage(hwnd, WM_CLOSE, 0, 0);
-				break;
+				_this->DelTrayIcon();
+				HANDLE hEndSessionEvent = OpenEvent(EVENT_MODIFY_STATE, FALSE, "Global\\EndSessionEvent");
+				if (hEndSessionEvent != NULL) {
+					SetEvent(hEndSessionEvent);
+					CloseHandle(hEndSessionEvent);
+				}
 			}
-			/*DWORD SessionID;
-			SessionID=GetCurrentSessionID();
-			vnclog.Print(LL_INTERR, VNCLOG("Session ID %i\n"),SessionID);
-			if (SessionID!=0)
-			{
-				fShutdownOrdered=TRUE;
-				Sleep(1000);
-				vnclog.Print(LL_INTERR, VNCLOG("WM_QUERYENDSESSION session!=0\n"));
-				vnclog.Print(LL_INTINFO, VNCLOG("KillAuthClients() ID_CLOSE \n"));
-				_this->m_server->KillAuthClients();				
-				PostMessage(hwnd, WM_CLOSE, 0, 0);
-			}*/
 		}	
-		break;
+		return 1;
 		
 	case WM_ENDSESSION:
 		fShutdownOrdered = TRUE;
 		vnclog.Print(LL_INTERR, VNCLOG("WM_ENDSESSION\n"));
-		break;
+		DestroyWindow(hwnd);
+		return 0;
 
 	case WM_USERCHANGED:
 		// The current user may have changed.

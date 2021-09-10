@@ -155,6 +155,9 @@ vncServer::vncServer()
 	m_querytimeout = 10;
 	m_querydisabletime = 10;
 
+	m_maxViewerSetting = 0;
+	m_maxViewers = 128;
+	m_Collabo = false;
 	// Autolock settings
 	m_lock_on_exit = 0;
 
@@ -268,6 +271,9 @@ vncServer::vncServer()
 	if (m_virtualDisplaySupported)
 		virtualDisplay = new VirtualDisplay();
 #endif
+	DriverWanted = FALSE;
+	HookWanted = FALSE;
+	DriverWantedSet = FALSE;
 }
 
 vncServer::~vncServer()
@@ -544,7 +550,7 @@ vncClientId vncServer::AddClient(VSocket *socket,
 		delete socket;
 		return -1;
 	}
-
+	client->setTiming(GetTickCount());
 	// Set the client's settings
 	client->SetOutgoing(outgoing);
 	client->SetProtocolVersion(protocolMsg);
@@ -682,6 +688,14 @@ vncServer::Authenticated(vncClientId clientid)
 
 			// Add the client to the auth list
 			m_authClients.push_back(clientid);
+
+			//If we are the only client, we give it mouse access.
+			//Other client can take access when the click a mouse button
+			if (m_authClients.size() == 1)
+				client->SetHasMouse(true);
+			else
+				client->SetHasMouse(false);
+
 
 			// Create the screen handler if necessary
 			if (m_desktop == NULL)
@@ -1304,6 +1318,11 @@ vncServer::RemoveClient(vncClientId clientid)
 					if (!ExitWindowsEx(EWX_LOGOFF, 0))
 						vnclog.Print(LL_CONNERR, VNCLOG("client disconnect - failed to logoff user!\n"));
 				}
+			}
+			if (vncService::RunningAsService() && m_Rdpmode) {
+				fShutdownOrdered = true;
+				vnclog.Print(LL_CONNERR, VNCLOG("last client disconnect - restart server for rdpmode\n"));
+
 			}
 		}
 #endif
@@ -2626,11 +2645,31 @@ vncServer::initialCapture_done() {
 
 void
 vncServer::TriggerUpdate() {
+	omni_mutex_lock l1(m_desktopLock, 150);
+	omni_mutex_lock l(m_clientsLock, 150);
 	vncClientList::iterator i;
 	// Post this update to all the connected clients
 	for (i = m_authClients.begin(); i != m_authClients.end(); i++)
 	{
 		GetClient(*i)->TriggerUpdate();
+
+	}
+}
+
+void
+vncServer::SetHasMouse()
+{
+vncClientList::iterator i;
+omni_mutex_lock l(m_clientsLock, 99);
+	for (i = m_authClients.begin(); i != m_authClients.end(); i++)
+	{
+		if (GetClient(*i)->ask_mouse == true) {
+			GetClient(*i)->SetHasMouse(true);
+			GetClient(*i)->ask_mouse = false;
+		}
+		else
+			GetClient(*i)->SetHasMouse(false);
+
 
 	}
 }
@@ -2774,4 +2813,29 @@ void vncServer::SetFTTimeout(int msecs)
 void vncServer::AutoCapt(int autocapt)
 {
 	m_autocapt = autocapt; 
+}
+
+short vncServer::getOldestViewer()
+{
+	omni_mutex_lock l(m_clientsLock, 43);
+	short clientId = 0;
+	DWORD timing = 0;
+
+	vncClientList::iterator i;
+
+	for (i = m_authClients.begin(); i != m_authClients.end(); i++)
+	{
+		if (!GetClient(*i))
+			continue;
+		if (timing == 0 || GetClient(*i)->getTiming() < timing) {
+			timing = GetClient(*i)->getTiming();
+			clientId = GetClient(*i)->GetClientId();
+		}
+	}
+	return clientId;
+}
+
+int vncServer::getNumberViewers()
+{
+	return  m_authClients.size();
 }

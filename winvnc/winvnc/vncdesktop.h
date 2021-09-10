@@ -271,7 +271,8 @@ public:
 	int aantal_session;
 	vncServer 		*m_server;
 	ScreenCapture *m_screenCapture;
-	// Implementation
+	// Screen info
+	rfbServerInitMsg	m_scrinfo;
 protected:
 
 	// Routines to hook and unhook us
@@ -341,10 +342,7 @@ protected:
 		BITMAPINFO		bmi;
 		// Colormap info - comes straight after BITMAPINFO - **HACK**
 		RGBQUAD			cmap[256];
-	} m_bminfo;
-
-	// Screen info
-	rfbServerInitMsg	m_scrinfo;
+	} m_bminfo;	
 
 	// These are the red, green & blue masks for a pixel
 	DWORD			m_rMask, m_gMask, m_bMask;
@@ -436,11 +434,6 @@ protected:
 	HWND hFolderView;
 	rfb::Region2D iconregion;
 	bool blankmonitorstate;
-
-	
-	BOOL DriverWanted;
-	BOOL HookWanted;
-	BOOL DriverWantedSet;
 
 	//Multi monitor
 	int nr_monitors;

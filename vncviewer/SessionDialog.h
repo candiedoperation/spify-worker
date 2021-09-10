@@ -68,6 +68,8 @@ public:
 
 	bool ViewOnly;
 	bool fAutoScaling;
+	bool fAutoScalingEven;
+	bool fAutoScalingLimit;
 	bool fExitCheck;
 	bool allowMonitorSpanning;
 	bool changeServerRes;
@@ -100,6 +102,7 @@ public:
 	bool requestShapeUpdates;
 	int  quickoption;
 	bool ignoreShapeUpdates;
+	bool BlockSameMouse;
 	bool Emul3Buttons; 
 	bool JapKeyboard;
 	bool preemptiveUpdates;
@@ -159,8 +162,12 @@ public:
 	VNCOptions *m_pOpt;
 	void StartListener();
 	void ModeSwitch(HWND hwnd, WPARAM wParam);
+	void DpiChange(HWND hDlg);
+	bool IsOnlyOneMonitor(HWND hDlg);
+	bool dpichanged;
+	UINT m_Dpi;
+	UINT m_DpiOld;
 private:
-
 	int cx, cy;
 	HWND hTabEncoders, hTabKeyboardMouse, hTabDisplay, hTabMisc, hTabSecurity, hTabQuickOptions, hTabListen;
 	HWND m_hTab;

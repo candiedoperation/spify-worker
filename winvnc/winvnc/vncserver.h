@@ -155,6 +155,8 @@ public:
 	virtual void InitialUpdate(bool value);
 	virtual void AutoCapt(int autocapt);
 	virtual int AutoCapt() { return m_autocapt; }
+	short getOldestViewer();
+	int getNumberViewers();
 
 	virtual BOOL All_clients_initialalized();
 	void initialCapture_done();
@@ -201,6 +203,11 @@ public:
 	virtual BOOL DeskDupEngine() {return m_deskDupEngine;};
 	virtual void Driver(BOOL enable);
 	virtual BOOL Driver() {return m_driver;};
+
+	BOOL DriverWanted;
+	BOOL HookWanted;
+	BOOL DriverWantedSet;
+
 	virtual void Hook(BOOL enable);
 	virtual BOOL Hook() {return m_hook;};
 	virtual void Virtual(BOOL enable) {m_virtual = enable;};
@@ -352,6 +359,36 @@ public:
     virtual void SetQueryIfNoLogon(const UINT setting) {m_queryifnologon = (setting != 0);};
 	virtual BOOL QueryIfNoLogon() {return m_queryifnologon;};
 
+	UINT getMaxViewerSetting()
+	{
+		return m_maxViewerSetting;
+	};
+
+	void setMaxViewerSetting(const UINT setting)
+	{
+		m_maxViewerSetting = setting;
+	};
+
+	BOOL getCollabo()
+	{
+		return m_Collabo;
+	};
+
+	void setCollabo(const BOOL setting)
+	{
+		m_Collabo = setting;
+	};
+
+	UINT getMaxViewers()
+	{
+		return m_maxViewers;
+	};
+
+	void setMaxViewers(const UINT setting)
+	{
+		m_maxViewers = setting;
+	};
+
 	// Whether or not to allow connections from the local machine
 	virtual void SetLoopbackOk(BOOL ok) {m_loopback_allowed = ok;};
 	virtual BOOL LoopbackOk() {return m_loopback_allowed;};
@@ -496,6 +533,7 @@ public:
 #endif
 
 	void TriggerUpdate();
+	void SetHasMouse();
 
 	bool OS_Shutdown;
 	void StopReconnectAll();
@@ -564,6 +602,9 @@ protected:
 	BOOL				m_queryifnologon;
  	UINT				m_idle_timeout;
 
+	UINT				m_maxViewerSetting;
+	UINT				m_maxViewers;
+	BOOL				m_Collabo;
 	BOOL				m_remove_wallpaper;
 	// adzm - 2010-07 - Disable more effects or font smoothing
 	BOOL				m_remove_effects;

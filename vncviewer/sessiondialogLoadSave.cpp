@@ -147,7 +147,6 @@ void SessionDialog::SaveToFile(char *fname, bool asDefault)
 	}	
 	saveInt("viewonly",				ViewOnly,			fname);	
 	saveInt("showtoolbar",			ShowToolbar,		fname);
-	saveInt("AutoScaling",          fAutoScaling,     fname);
 	saveInt("fullscreen",			FullScreen,		fname);
 	saveInt("SavePos",				SavePos, fname);
 	saveInt("SaveSize",				SaveSize, fname);
@@ -161,6 +160,8 @@ void SessionDialog::SaveToFile(char *fname, bool asDefault)
 	saveInt("disableclipboard",		DisableClipboard, fname);
 	saveInt("Scaling",				scaling,		fname);
 	saveInt("AutoScaling",			fAutoScaling,		fname);
+	saveInt("AutoScalingEven",      fAutoScalingEven, fname);
+	saveInt("AutoScalingLimit",		fAutoScalingLimit, fname);
 	saveInt("scale_num",			scale_num,		fname);
 	saveInt("scale_den",			scale_den,		fname);
 	// Tight Specific
@@ -227,7 +228,6 @@ void SessionDialog::LoadFromFile(char *fname)
   NoStatus =			readInt("nostatus",			NoStatus,		fname) != 0;
   NoHotKeys =			readInt("nohotkeys",			NoHotKeys,	fname) != 0;
   ShowToolbar =			readInt("showtoolbar",			ShowToolbar,		fname) != 0;
-  fAutoScaling =		readInt("AutoScaling",			fAutoScaling,		fname) != 0;
   FullScreen =			readInt("fullscreen",		FullScreen,	fname) != 0;
   SavePos =				readInt("SavePos", SavePos, fname) != 0;
   SaveSize =			readInt("SaveSize", SaveSize, fname) != 0;
@@ -241,6 +241,8 @@ void SessionDialog::LoadFromFile(char *fname)
   DisableClipboard =	readInt("disableclipboard", DisableClipboard, fname) != 0;
   scaling =				readInt("Scaling", scaling,  fname) != 0;
   fAutoScaling =		readInt("AutoScaling", fAutoScaling,  fname) != 0;
+  fAutoScalingEven =    readInt("AutoScalingEven", fAutoScalingEven, fname) != 0;
+  fAutoScalingLimit =	readInt("AutoScalingLimit", fAutoScalingLimit, fname) != 0;
   scale_num =			readInt("scale_num",		scale_num,	fname);
   scale_den =			readInt("scale_den",		scale_den,	fname);
   // Tight specific
@@ -339,7 +341,6 @@ void SessionDialog::SetDefaults()
 	autoDetect = false;
 	Use8Bit = rfbPFFullColors; //false;
 	ShowToolbar = true;
-	fAutoScaling = false;
 	NoStatus = false;
 	NoHotKeys = false;
 	PreferredEncodings.clear();
@@ -351,6 +352,8 @@ void SessionDialog::SetDefaults()
 	DisableClipboard = false;
 	scaling = false;
 	fAutoScaling = false;
+	fAutoScalingEven = false;
+	fAutoScalingLimit = false;
 	scale_num = 100;
 	scale_den = 100;  
 	// Modif sf@2002 - Server Scaling

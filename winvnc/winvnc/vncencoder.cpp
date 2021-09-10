@@ -36,7 +36,7 @@
 #endif
 #else
 #include "../zlib/zlib.h"
-#include "../zstd-1.4.4/lib/zstd.h"
+#include "../zstd/lib/zstd.h"
 #endif
 
 // Pixel format used internally when the client is palette-based & server is truecolour

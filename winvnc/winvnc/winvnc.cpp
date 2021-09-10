@@ -148,9 +148,6 @@ void Secure_Plugin(char *szPlugin);
 //HACK to use name in autoreconnect from service with dyn dns
 #ifndef ULTRAVNC_VEYON_SUPPORT
 char dnsname[255];
-#endif
-VNC_OSVersion VNCOS;
-#ifndef ULTRAVNC_VEYON_SUPPORT
 extern bool PreConnect;
 // winvnc.exe will also be used for helper exe
 // This allow us to minimize the number of seperate exe
@@ -272,11 +269,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
 	
 
 #ifndef _INTERNALLIB
-	if (VNCOS.OS_XP==true)
+	if (VNC_OSVersion::getInstance()->OS_XP==true)
 		 MessageBoxSecure(NULL, "WIndows XP require special build", "Warning", MB_ICONERROR);
 #endif
 		
-	if (VNCOS.OS_NOTSUPPORTED==true)
+	if (VNC_OSVersion::getInstance()->OS_NOTSUPPORTED==true)
 	{
 		 MessageBoxSecure(NULL, "Error OS not supported","Unsupported OS", MB_ICONERROR);
 		return true;
@@ -311,8 +308,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
 	memset(&info, 0, sizeof(CR_INSTALL_INFO));
 	info.cb = sizeof(CR_INSTALL_INFO);
 	info.pszAppName = _T("UVNC");
-	info.pszAppVersion = _T("1.3.2");
-	info.pszEmailSubject = _T("UVNC server 1.3.2 Error Report");
+	info.pszAppVersion = _T("1.3.4");
+	info.pszEmailSubject = _T("UVNC server 1.3.4 Error Report");
 	info.pszEmailTo = _T("uvnc@skynet.be");
 	info.uPriorities[CR_SMAPI] = 1; // Third try send report over Simple MAPI    
 	// Install all available exception handlers
@@ -1212,6 +1209,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine,
 #ifdef CRASHRPT
 	crUninstall();
 #endif
+	VNC_OSVersion::releaseInstance();
 	return 0;
 }
 #endif
@@ -1383,38 +1381,6 @@ DWORD WINAPI imp_desktop_thread(LPVOID lpParam)
 //	RevertToSelf();
 	return 0;
 }
-
-/*
-// sf@2007 - For now we use a mmtimer to test the shutdown event periodically
-// Maybe there's a less rude method...
-void CALLBACK fpTimer(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2)
-{
-	if (hShutdownEvent)
-	{
-		// vnclog.Print(LL_INTERR, VNCLOG("****************** SDTimer tic\n"));
-		DWORD result=WaitForSingleObject(hShutdownEvent, 0);
-		if (WAIT_OBJECT_0==result)
-		{
-			ResetEvent(hShutdownEvent);
-			fShutdownOrdered = true;
-			//vnclog.Print(LL_INTERR, VNCLOG("****************** WaitForSingleObject - Shutdown server\n"));
-		}
-	}
-}
-
-void InitSDTimer()
-{
-	if (mmRes != -1) return;
-	//vnclog.Print(LL_INTERR, VNCLOG("****************** Init SDTimer\n"));
-	mmRes = timeSetEvent( 2000, 0, (LPTIMECALLBACK)fpTimer, 0, TIME_PERIODIC );
-}
-
-void KillSDTimer()
-{
-	//vnclog.Print(LL_INTERR, VNCLOG("****************** Kill SDTimer\n"));
-	timeKillEvent(mmRes);
-	mmRes = -1;
-}*/
 
 // This is the main routine for WinVNC when running as an application
 // (under Windows 95 or Windows NT)

@@ -69,7 +69,7 @@
 #endif
 #else
 #include "../zlib/zlib.h"
-#include "../zstd-1.4.4/lib/zstd.h"
+#include "../zstd/lib/zstd.h"
 #endif
 
 #include "mmsystem.h" // sf@2002
@@ -174,8 +174,6 @@ bool replaceFile(const char *src, const char *dst)
 #endif
 #include "Localization.h" // Act : add localization on messages
 typedef BOOL (WINAPI *PGETDISKFREESPACEEX)(LPCSTR,PULARGE_INTEGER, PULARGE_INTEGER, PULARGE_INTEGER);
-
-unsigned long updates_sent;
 
 // vncClient update thread class
 
@@ -450,7 +448,7 @@ vncClientUpdateThread::run_undetached(void *arg)
 	update.enable_copyrect(true);
 	BOOL send_palette = FALSE;
 	const int UPDATE_INTERVAL=40;
-	updates_sent=0;
+	first_run = true;
 
 	vnclog.Print(LL_INTINFO, VNCLOG("starting update thread\n"));
 	//Make sure we never can get locked by the initail m_initial_update) wait loop
@@ -464,7 +462,7 @@ vncClientUpdateThread::run_undetached(void *arg)
 			// We block as long as updates are disabled, or the client
 			// isn't interested in them, unless this thread is killed.
 
-			if (updates_sent < 1)  {
+			if (first_run)  {
 				while (m_active && (!m_enable || (
 								m_client->m_update_tracker.get_changed_region().intersect(m_client->m_incr_rgn).is_empty() &&
 								m_client->m_update_tracker.get_copied_region().intersect(m_client->m_incr_rgn).is_empty() &&
@@ -480,6 +478,7 @@ vncClientUpdateThread::run_undetached(void *arg)
 					m_sync_sig->broadcast();
 					// Wait to be kicked into action
 					m_signal->wait();
+					first_run = false;
 				}
 			} 
 			else {
@@ -541,7 +540,8 @@ vncClientUpdateThread::run_undetached(void *arg)
 				}
 				else // eSVNC-UltraVNC Scaling
 				{
-					rfbResizeFrameBufferMsg rsmsg = {0};
+					rfbResizeFrameBufferMsg rsmsg;
+					memset(&rsmsg, 0, sizeof(rfbResizeFrameBufferMsg));
 					rsmsg.type = rfbResizeFrameBuffer;
 					rsmsg.framebufferWidth  = Swap16IfLE(ViewerSize.br.x);
 					rsmsg.framebufferHeigth = Swap16IfLE(ViewerSize.br.y);
@@ -567,10 +567,7 @@ vncClientUpdateThread::run_undetached(void *arg)
 			// Get the update details from the update tracker
 			m_client->m_update_tracker.flush_update(update, clipregion);
 
-	
-			if (updates_sent > 1 ) 
-				m_client->m_cursor_update_pending = m_client->m_encodemgr.WasCursorUpdatePending();
-			updates_sent++;
+			m_client->m_cursor_update_pending = m_client->m_encodemgr.WasCursorUpdatePending();
 
 			if (!m_client->m_cursor_update_sent && !m_client->m_cursor_update_pending) {
 				if (m_client->m_mousemoved) {
@@ -716,8 +713,6 @@ vncClientUpdateThread::run_undetached(void *arg)
 				if (m_client->m_server->MaxCpu() == 100)
 					m_client->sendingUpdate = true;
 				if (m_client->SendUpdate(update)) {
-					updates_sent++;
-					//m_client->m_incr_rgn.clear();
 					clipregion.clear();
 #ifdef _DEBUG
 					static DWORD sNotifyLastCopy1 = GetTickCount();
@@ -737,7 +732,6 @@ vncClientUpdateThread::run_undetached(void *arg)
 	}
 
 	vnclog.Print(LL_INTINFO, VNCLOG("stopping update thread\n"));	
-	vnclog.Print(LL_INTERR, "client sent %lu updates\n", updates_sent);
 	return 0;
 }
 
@@ -1180,6 +1174,27 @@ vncClientThread::InitAuthenticate()
 		if (!AuthenticateLegacyClient()) {
 			return FALSE;
 		}
+	}
+
+	if (m_server->getNumberViewers() > m_server->getMaxViewers() -1)
+	{
+		if (m_server->getMaxViewerSetting() == 0) {
+			SendConnFailed("Max viewers reached");
+			return FALSE;
+		}
+		else {
+
+			m_server->AddAuthHostsBlacklist(m_client->GetClientName());
+			m_server->AddAuthHostsBlacklist(m_client->GetClientName());
+			m_server->AddAuthHostsBlacklist(m_client->GetClientName());
+			m_server->AddAuthHostsBlacklist(m_client->GetClientName());
+			m_server->AddAuthHostsBlacklist(m_client->GetClientName());
+			m_server->AddAuthHostsBlacklist(m_client->GetClientName());
+			
+			m_server->GetClient(m_server->getOldestViewer())->Kill();
+			m_client->forceBlacklist = true;
+		}
+
 	}
 
 
@@ -2269,7 +2284,7 @@ vncClientThread::run(void *arg)
 	DLL_InitializeTouchInjection = NULL;
 	DLL_PInjectTouch = NULL;
 	win8dllHandle = NULL;
-	if (VNCOS.OS_WIN8 || VNCOS.OS_WIN10)
+	if (VNC_OSVersion::getInstance()->OS_WIN8 || VNC_OSVersion::getInstance()->OS_WIN10)
 	{
 		win8dllHandle = LoadLibrary("InjectTouch.dll");
 		DLL_InitializeTouchInjection = (PInitializeTouchInjection) GetProcAddress(win8dllHandle, "DLL_InitializeTouchInjection");
@@ -2381,7 +2396,9 @@ vncClientThread::run(void *arg)
 	}
 
 	// Authenticated OK - remove from blacklist and remove timeout
-	m_server->RemAuthHostsBlacklist(m_client->GetClientName());
+	if (!m_client->forceBlacklist)
+		m_server->RemAuthHostsBlacklist(m_client->GetClientName());
+	m_client->forceBlacklist = false;
 	m_socket->SetTimeout(m_server->AutoIdleDisconnectTimeout()*1000);
 	vnclog.Print(LL_INTINFO, VNCLOG("authenticated connection\n"));
 
@@ -2832,6 +2849,7 @@ vncClientThread::run(void *arg)
 					if (Swap32IfLE(encoding) == rfbEncodingXCursor) {
 						m_client->m_encodemgr.EnableXCursor(TRUE);
 						m_server->EnableXRichCursor(TRUE);
+						m_client->m_encodemgr.m_buffer->m_cursor_shape_cleared = TRUE;
 						vnclog.Print(LL_INTINFO, VNCLOG("X-style cursor shape updates enabled\n"));
 						continue;
 					}
@@ -2839,6 +2857,7 @@ vncClientThread::run(void *arg)
 					// Is this a RichCursor encoding request?
 					if (Swap32IfLE(encoding) == rfbEncodingRichCursor) {
 						m_client->m_encodemgr.EnableRichCursor(TRUE);
+						m_client->m_encodemgr.m_buffer->m_cursor_shape_cleared = TRUE;
 						m_server->EnableXRichCursor(TRUE);
 						vnclog.Print(LL_INTINFO, VNCLOG("Full-color cursor shape updates enabled\n"));
 						continue;
@@ -3434,7 +3453,7 @@ vncClientThread::run(void *arg)
 						    ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP;
 					    else
 						flags |= (msg.pe.buttonMask & rfbButton1Mask) 
-						    ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP;
+						    ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP;						
 					}
 					if ( (msg.pe.buttonMask & rfbButton2Mask) != 
 						(m_client->m_ptrevent.buttonMask & rfbButton2Mask) )
@@ -3452,6 +3471,31 @@ vncClientThread::run(void *arg)
 						flags |= (msg.pe.buttonMask & rfbButton3Mask) 
 						    ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP;
 					}
+
+					if (m_server->getCollabo()) {
+						if ((msg.pe.buttonMask & rfbButton1Mask) != (m_client->m_ptrevent.buttonMask & rfbButton1Mask) ||
+							(msg.pe.buttonMask & rfbButton2Mask) != (m_client->m_ptrevent.buttonMask & rfbButton2Mask) ||
+							(msg.pe.buttonMask & rfbButton1Mask) != (m_client->m_ptrevent.buttonMask & rfbButton1Mask)) {
+							if (!m_client->has_mouse) {
+								m_client->ask_mouse = true;
+								m_server->SetHasMouse();
+							}
+						}
+
+						if (!m_client->has_mouse) {
+							int xx = msg.pe.x - GetSystemMetrics(SM_XVIRTUALSCREEN) + (m_client->monitor_Offsetx + m_client->m_ScreenOffsetx);
+							int yy = msg.pe.y - GetSystemMetrics(SM_YVIRTUALSCREEN) + (m_client->monitor_Offsety + m_client->m_ScreenOffsety);
+							if (m_server->Driver()){
+								xx = msg.pe.x + m_client->monitor_Offsetx;
+								yy = msg.pe.y + m_client->monitor_Offsety;
+							}
+							if(m_client->simulateCursor)
+								m_client->simulateCursor->moveCursor(xx, yy);
+							break;
+						}
+					}
+
+
 
 
 					// Treat buttons 4 and 5 presses as mouse wheel events
@@ -3736,18 +3780,21 @@ vncClientThread::run(void *arg)
 				/// fix by PGM (pgmoney)
 				if (!m_server->GetDesktopPointer()->GetBlockInputState() && msg.sim.status==1) 
 					{ 
+						CARD32 state = rfbServerState_Enabled; 
 						m_client->m_encodemgr.m_buffer->m_desktop->SetBlockInputState(true); 
 						m_client->m_bClientHasBlockedInput = (true);
 					} 
 
 				else if (m_server->GetDesktopPointer()->GetBlockInputState() && m_client->m_bClientHasBlockedInput && msg.sim.status==0)
 					{
+						CARD32 state = rfbServerState_Disabled; 
 						m_client->m_encodemgr.m_buffer->m_desktop->SetBlockInputState(FALSE);
 						m_client->m_bClientHasBlockedInput = (FALSE); 
 					} 
 
 				else if (!m_server->GetDesktopPointer()->GetBlockInputState() && !m_client->m_bClientHasBlockedInput && msg.sim.status==0)
 					{
+						CARD32 state = rfbServerState_Disabled; 
 						m_client->m_encodemgr.m_buffer->m_desktop->SetBlockInputState(FALSE);
 						m_client->m_bClientHasBlockedInput = (FALSE);
 					}
@@ -3781,7 +3828,9 @@ vncClientThread::run(void *arg)
 					sprintf_s(szText, "++++++++++++++++++++++++++++++ DesktopScreen %i %i %i %i \n", x, y, w, h);
 					OutputDebugString(szText);
 #endif				
-					resolutionMap.insert(make_pair(make_pair(x, y), make_pair(w, h)));
+					//add some protection, 
+					if (w*h <= 12582912)
+						resolutionMap.insert(make_pair(make_pair(x, y), make_pair(w, h)));
 				}
 #ifdef VIRTUAL_DISPLAY_SUPPORT
 				if (!m_server->m_virtualDisplaySupported)
@@ -4824,6 +4873,11 @@ vncClient::vncClient() : m_clipboard(ClipboardSettings::defaultServerCaps), Send
 	sendingUpdate = false;
 	m_singleExtendMode = false;
 	m_firstExtDesktop = true;
+	m_firstExtDesktopIncremental = true;
+	has_mouse = false;
+	ask_mouse = false;
+	simulateCursor = NULL;
+	forceBlacklist = false;
 }
 
 vncClient::~vncClient()
@@ -4927,6 +4981,9 @@ vncClient::~vncClient()
 	if (m_server->virtualDisplay)
 		m_server->virtualDisplay->disconnectDisplay(m_id, !m_server->AreThereMultipleViewers() && initialCapture_done);
 #endif
+	if (simulateCursor)
+		delete simulateCursor;
+
 }
 
 // Init
@@ -5021,22 +5078,37 @@ vncClient::NotifyUpdate(rfbFramebufferUpdateRequestMsg fur)
 			m_encodemgr.m_buffer->m_desktop->UpdateFullScreen();
 		}
 		else {
-			update.tl.x = (Swap16IfLE(fur.x) + monitor_Offsetx) * m_nScale;
-			update.tl.y = (Swap16IfLE(fur.y) + monitor_Offsety) * m_nScale;
-			update.br.x = update.tl.x + Swap16IfLE(fur.w) * m_nScale;
-			update.br.y = update.tl.y + Swap16IfLE(fur.h) * m_nScale;
-			// Verify max size, scaled changed on server while not pushed to viewer
-			if (update.tl.x < (int)((m_ScaledScreen.tl.x + monitor_Offsetx) * m_nScale))
+			if (m_firstExtDesktopIncremental) {
+				//The first full was used for the extDesktopSize, we send it now
 				update.tl.x = (m_ScaledScreen.tl.x + monitor_Offsetx) * m_nScale;
-			if (update.tl.y < (int)((m_ScaledScreen.tl.y + monitor_Offsety) * m_nScale))
 				update.tl.y = (m_ScaledScreen.tl.y + monitor_Offsety) * m_nScale;
-			if (update.br.x > (int)(update.tl.x + (m_ScaledScreen.br.x - m_ScaledScreen.tl.x) * m_nScale))
 				update.br.x = update.tl.x + (m_ScaledScreen.br.x - m_ScaledScreen.tl.x) * m_nScale;
-			if (update.br.y > (int)(update.tl.y + (m_ScaledScreen.br.y - m_ScaledScreen.tl.y) * m_nScale))
 				update.br.y = update.tl.y + (m_ScaledScreen.br.y - m_ScaledScreen.tl.y) * m_nScale;
-			update_rgn = update;
-			if (update_rgn.is_empty())
-				return false;
+				update_rgn = update;
+				if (update_rgn.is_empty())
+					return false;
+				m_update_tracker.add_changed(update_rgn);
+				m_encodemgr.m_buffer->m_desktop->UpdateFullScreen();
+				m_firstExtDesktopIncremental = false;
+			}
+			else {
+				update.tl.x = (Swap16IfLE(fur.x) + monitor_Offsetx) * m_nScale;
+				update.tl.y = (Swap16IfLE(fur.y) + monitor_Offsety) * m_nScale;
+				update.br.x = update.tl.x + Swap16IfLE(fur.w) * m_nScale;
+				update.br.y = update.tl.y + Swap16IfLE(fur.h) * m_nScale;
+				// Verify max size, scaled changed on server while not pushed to viewer
+				if (update.tl.x < (int)((m_ScaledScreen.tl.x + monitor_Offsetx) * m_nScale))
+					update.tl.x = (m_ScaledScreen.tl.x + monitor_Offsetx) * m_nScale;
+				if (update.tl.y < (int)((m_ScaledScreen.tl.y + monitor_Offsety) * m_nScale))
+					update.tl.y = (m_ScaledScreen.tl.y + monitor_Offsety) * m_nScale;
+				if (update.br.x > (int)(update.tl.x + (m_ScaledScreen.br.x - m_ScaledScreen.tl.x) * m_nScale))
+					update.br.x = update.tl.x + (m_ScaledScreen.br.x - m_ScaledScreen.tl.x) * m_nScale;
+				if (update.br.y > (int)(update.tl.y + (m_ScaledScreen.br.y - m_ScaledScreen.tl.y) * m_nScale))
+					update.br.y = update.tl.y + (m_ScaledScreen.br.y - m_ScaledScreen.tl.y) * m_nScale;
+				update_rgn = update;
+				if (update_rgn.is_empty())
+					return false;
+			}
 		}
 #ifdef _DEBUG		
 		OutputDevMessage("Update Rect %i %i %i %i", update.tl.x, update.tl.y, update.br.x - update.tl.x, update.br.y - update.tl.y);
@@ -5330,9 +5402,10 @@ vncClient::SendUpdate(rfb::SimpleUpdateTracker &update)
 			char new_name[256];
 			if (GetUserObjectInformation(desktop, UOI_NAME, &new_name, 256, &dummy) &&
 				strcmp(new_name, "Default") == 0 && vncService::InputDesktopSelected() != 2) {
+				//Send ExtDesktopSize pseudo - rectangle to inform the client we support size changes through setDesktopSize
 				hdr.encoding = Swap32IfLE(rfbEncodingExtDesktopSize);
-				hdr.r.w = Swap16IfLE(NewsizeW * m_nScale_viewer / m_nScale);
-				hdr.r.h = Swap16IfLE(NewsizeH * m_nScale_viewer / m_nScale);
+				hdr.r.w = Swap16IfLE(m_encodemgr.m_buffer->m_desktop->m_scrinfo.framebufferWidth * m_nScale_viewer / m_nScale);
+				hdr.r.h = Swap16IfLE(m_encodemgr.m_buffer->m_desktop->m_scrinfo.framebufferHeight * m_nScale_viewer / m_nScale);
 #ifdef VIRTUAL_DISPLAY_SUPPORT
 				hdr.r.x = Swap16IfLE(m_server->m_virtualDisplaySupported);
 #else
@@ -5345,8 +5418,8 @@ vncClient::SendUpdate(rfb::SimpleUpdateTracker &update)
 					eds.id = Swap32IfLE(1);
 					eds.x = Swap16IfLE(0);
 					eds.y = Swap16IfLE(0);
-					eds.width = Swap16IfLE(NewsizeW * m_nScale_viewer / m_nScale);
-					eds.height = Swap16IfLE(NewsizeH * m_nScale_viewer / m_nScale);
+					eds.width = Swap16IfLE(m_encodemgr.m_buffer->m_desktop->m_scrinfo.framebufferWidth * m_nScale_viewer / m_nScale);
+					eds.height = Swap16IfLE(m_encodemgr.m_buffer->m_desktop->m_scrinfo.framebufferHeight * m_nScale_viewer / m_nScale);
 					eds.flags = Swap32IfLE(0);
 				}
 				rfbFramebufferUpdateMsg header;
@@ -7066,3 +7139,18 @@ int  vncClient::filetransferrequestPart2(int nDirZipRet)
 	return 0;
 }
 #endif
+
+extern HINSTANCE	hAppInstance;
+void vncClient::SetHasMouse(bool has_mouse)
+{
+	this->has_mouse = has_mouse;
+	if (has_mouse) {
+		if (simulateCursor)
+			delete simulateCursor;
+		simulateCursor = NULL;
+	}
+	else {
+		simulateCursor = new SimulateCursor(hAppInstance);
+	}
+
+}

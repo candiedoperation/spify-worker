@@ -556,6 +556,9 @@ vncProperties::DialogProc(HWND hwnd,
 			HWND hNewMSLogon = GetDlgItem(hwnd, IDC_NEW_MSLOGON);
 			SendMessage(hNewMSLogon, BM_SETCHECK, _this->m_server->GetNewMSLogon(), 0);
 
+			HWND hReverseAuth = GetDlgItem(hwnd, IDC_REVERSEAUTH);
+			SendMessage(hReverseAuth, BM_SETCHECK, _this->m_server->GetReverseAuthRequired(), 0);
+
 			EnableWindow(GetDlgItem(hwnd, IDC_NEW_MSLOGON), _this->m_server->MSLogonRequired());
 			EnableWindow(GetDlgItem(hwnd, IDC_MSLOGON), _this->m_server->MSLogonRequired());
 			// Marscha@2004 - authSSP: end of change
@@ -1016,6 +1019,9 @@ vncProperties::DialogProc(HWND hwnd,
 				HWND hNewMSLogon = GetDlgItem(hwnd, IDC_NEW_MSLOGON);
 				_this->m_server->SetNewMSLogon(SendMessage(hNewMSLogon, BM_GETCHECK, 0, 0) == BST_CHECKED);
 				// Marscha@2004 - authSSP: end of change
+
+				HWND hReverseAuth = GetDlgItem(hwnd, IDC_REVERSEAUTH);
+				_this->m_server->SetReverseAuthRequired(SendMessage(hReverseAuth, BM_GETCHECK, 0, 0) == BST_CHECKED);
 
 				int nDScale = GetDlgItemInt(hwnd, IDC_SCALE, NULL, FALSE);
 				if (nDScale < 1 || nDScale > 9) nDScale = 1;
@@ -1738,6 +1744,10 @@ vncProperties::Load(BOOL usersettings)
 	m_pref_NewMSLogon = LoadInt(hkLocal, "NewMSLogon", m_pref_NewMSLogon);
 	m_server->SetNewMSLogon(m_pref_NewMSLogon);
 
+	m_pref_ReverseAuthRequired = true;
+	m_pref_ReverseAuthRequired = LoadInt(hkLocal, "ReverseAuthRequired", m_pref_ReverseAuthRequired);
+	m_server->SetReverseAuthRequired(m_pref_ReverseAuthRequired);
+
 #ifdef DSM_SUPPORT
 	// sf@2003 - Moved DSM params here
 	m_pref_UseDSMPlugin=false;
@@ -2214,6 +2224,7 @@ vncProperties::Save()
 	SaveInt(hkLocal, "MSLogonRequired", m_server->MSLogonRequired());
 	// Marscha@2004 - authSSP: save "New MS-Logon" state
 	SaveInt(hkLocal, "NewMSLogon", m_server->GetNewMSLogon());
+	SaveInt(hkLocal, "ReverseAuthRequired", m_server->GetReverseAuthRequired());
 #ifdef DSM_SUPPORT
 	// sf@2003 - DSM params here
 	SaveInt(hkLocal, "UseDSMPlugin", m_server->IsDSMPluginEnabled());
@@ -2367,6 +2378,10 @@ void vncProperties::LoadFromIniFile()
 	m_pref_UseDSMPlugin=false;
 	m_pref_UseDSMPlugin = myIniFile.ReadInt("admin", "UseDSMPlugin", m_pref_UseDSMPlugin);
 	myIniFile.ReadString("admin", "DSMPlugin",m_pref_szDSMPlugin,128);
+
+	m_pref_ReverseAuthRequired = true;
+	m_pref_ReverseAuthRequired = myIniFile.ReadInt("admin", "ReverseAuthRequired", m_pref_ReverseAuthRequired);
+	m_server->SetReverseAuthRequired(m_pref_ReverseAuthRequired);
 	
 	//adzm 2010-05-12 - dsmplugin config
 	myIniFile.ReadString("admin", "DSMPluginConfig", m_pref_DSMPluginConfig, 512);
@@ -2591,6 +2606,7 @@ void vncProperties::SaveToIniFile()
 				myIniFile.WriteInt("admin", "MSLogonRequired", m_server->MSLogonRequired());
 				// Marscha@2004 - authSSP: save "New MS-Logon" state
 				myIniFile.WriteInt("admin", "NewMSLogon", m_server->GetNewMSLogon());
+				myIniFile.WriteInt("admin", "ReverseAuthRequired", m_server->GetReverseAuthRequired());
 				// sf@2003 - DSM params here
 				myIniFile.WriteInt("admin", "ConnectPriority", m_server->ConnectPriority());
 				myIniFile.WriteString("admin", "service_commandline", service_commandline);
@@ -2625,6 +2641,7 @@ void vncProperties::SaveToIniFile()
 	myIniFile.WriteInt("admin", "MSLogonRequired", m_server->MSLogonRequired());
 	// Marscha@2004 - authSSP: save "New MS-Logon" state
 	myIniFile.WriteInt("admin", "NewMSLogon", m_server->GetNewMSLogon());
+	myIniFile.WriteInt("admin", "ReverseAuthRequired", m_server->GetReverseAuthRequired());
 	// sf@2003 - DSM params here
 	myIniFile.WriteInt("admin", "ConnectPriority", m_server->ConnectPriority());
 

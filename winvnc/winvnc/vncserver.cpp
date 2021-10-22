@@ -2376,6 +2376,18 @@ BOOL vncServer::SetNewMSLogon(BOOL fEnable)
 	return TRUE;
 }
 
+BOOL vncServer::GetReverseAuthRequired()
+{
+	return m_fReverseAuthRequired;
+}
+
+BOOL vncServer::SetReverseAuthRequired(BOOL fEnable)
+{
+	m_fReverseAuthRequired = fEnable;
+
+	return TRUE;
+}
+
 #ifdef DSM_SUPPORT
 //
 // sf@2002 - v1.1.x - DSM Plugin
@@ -2734,13 +2746,13 @@ void vncServer::actualRetryThread()
 					retrysock->SetTimeout(0);
 					// adzm 2009-07-05 - repeater IDs
 					// Add the new client to this server
-					AddClient(retrysock, TRUE, TRUE, 0, NULL, m_szAutoReconnectId, m_szAutoReconnectAdr, m_AutoReconnectPort,true);
+					AddClient(retrysock, !GetReverseAuthRequired(), TRUE, 0, NULL, m_szAutoReconnectId, m_szAutoReconnectAdr, m_AutoReconnectPort,true);
 					vnclog.Print(LL_INTINFO, VNCLOG("leaving reconnectThread....\n"));
 					return;
 				} else {
 					// Add the new client to this server
 					// adzm 2009-08-02
-					AddClient(retrysock, TRUE, TRUE, 0, NULL, NULL, m_szAutoReconnectAdr, m_AutoReconnectPort,true);
+					AddClient(retrysock, !GetReverseAuthRequired(), TRUE, 0, NULL, NULL, m_szAutoReconnectAdr, m_AutoReconnectPort,true);
 					vnclog.Print(LL_INTINFO, VNCLOG("leaving reconnectThread....\n"));
 					return;
 				}

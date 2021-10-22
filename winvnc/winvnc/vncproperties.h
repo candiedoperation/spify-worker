@@ -172,6 +172,8 @@ protected:
 	BOOL m_pref_Secure;
 	// Marscha@2004 - authSSP: added state of "New MS-Logon"
 	BOOL m_pref_NewMSLogon;
+	BOOL m_pref_ReverseAuthRequired;
+
 
 	BOOL m_pref_UseDSMPlugin;
 	char m_pref_szDSMPlugin[128];

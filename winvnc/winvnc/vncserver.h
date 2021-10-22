@@ -433,6 +433,9 @@ public:
 	virtual BOOL GetNewMSLogon();
 	virtual BOOL SetNewMSLogon(BOOL fEnable);
 
+	virtual BOOL GetReverseAuthRequired();
+	virtual BOOL SetReverseAuthRequired(BOOL fEnable);
+
 	virtual BOOL Primary() {return m_PrimaryEnabled;};
 	virtual void Primary(BOOL fEnable) {m_PrimaryEnabled = fEnable;};
 	virtual BOOL Secondary() {return m_SecondaryEnabled;};
@@ -673,6 +676,7 @@ protected:
 	BOOL	m_Secure;
 	BOOL    m_fMSLogonRequired;
 	BOOL    m_fNewMSLogon;
+	BOOL	m_fReverseAuthRequired;
 
 #ifdef DSM_SUPPORT
 	// sf@2002 - DSMPlugin

@@ -1,3 +1,4 @@
+#define _Gii
 #include "stdhdrs.h"
 #include "UltraVncZ.h"
 #include <stdlib.h> 

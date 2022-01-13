@@ -843,7 +843,9 @@ vncDesktop::Shutdown()
 	ShutdownInitWindowthread();
 
 	RECT rect{};
+#ifndef ULTRAVNC_VEYON_SUPPORT
 	SetBorderWindow(0, rect);
+#endif
 	// Now free all the bitmap stuff
 	if (m_hrootdc_Desktop != NULL)
 	{
@@ -1087,8 +1089,10 @@ vncDesktop::InitBitmap()
 
 	vnclog.Print(LL_INTINFO, VNCLOG("bitmap dimensions are %d x %d\n"), m_bmrect.br.x, m_bmrect.br.y);
 
+#ifndef ULTRAVNC_VEYON_SUPPORT
 	if (m_server->getFrame())
 		SetBorderWindow(true, rect);
+#endif
 
 	// Create a compatible memory DC
 	m_hmemdc = CreateCompatibleDC(m_hrootdc_Desktop);

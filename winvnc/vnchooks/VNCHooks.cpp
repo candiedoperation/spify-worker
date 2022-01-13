@@ -308,7 +308,7 @@ BOOL CALLBACK
 KillPropsProc(HWND hwnd, LPARAM lParam)
 {
 	// Remove our custom property...
-	RemoveProp(hwnd, (LPCTSTR) MAKELONG(VNC_POPUPSELN_ATOM, 0));
+	RemoveProp(hwnd, MAKEINTATOM(VNC_POPUPSELN_ATOM));
 	return TRUE;
 }
 
@@ -675,13 +675,13 @@ inline BOOL HookHandle(UINT MessageId, HWND hWnd, WPARAM wParam, LPARAM lParam)
 	case 485:  // HACK to handle popup menus
 		{
 			// Get the old popup menu selection value
-			HANDLE prop = GetProp(hWnd, (LPCTSTR) MAKELONG(VNC_POPUPSELN_ATOM, 0));
+			HANDLE prop = GetProp(hWnd, MAKEINTATOM(VNC_POPUPSELN_ATOM));
 			if (prop != (HANDLE) wParam)
 			{
 				// It did, so update the menu & the selection value
 				SendDeferredWindowRect(hWnd);
 				SetProp(hWnd,
-					(LPCTSTR) MAKELONG(VNC_POPUPSELN_ATOM, 0),
+					MAKEINTATOM(VNC_POPUPSELN_ATOM),
 					(HANDLE) wParam);
 			}
 		}
@@ -803,7 +803,7 @@ inline BOOL HookHandle(UINT MessageId, HWND hWnd, WPARAM wParam, LPARAM lParam)
 		////////////////////////////////////////////////////////////////
 		// VNCHOOKS PROPERTIES HANDLING WINDOWS
 	case WM_DESTROY:
-		RemoveProp(hWnd, (LPCTSTR) MAKELONG(VNC_POPUPSELN_ATOM, 0));
+		RemoveProp(hWnd, MAKEINTATOM(VNC_POPUPSELN_ATOM));
 		break;
 
 	}

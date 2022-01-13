@@ -382,8 +382,23 @@ BOOL vncService::IsWSLocked()
 
 	bool bLocked = false;
 
+	// Original code does not work if running as a service...  apparently no access to the desktop.
+	// Alternative is to check for a running LogonUI.exe (if present, system is either not logged in or locked)
+	HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	
+	PROCESSENTRY32W procentry;
+	procentry.dwSize = sizeof(procentry);
+	
+	if (Process32FirstW(hSnap, &procentry)) {
+		do {
+			if (!wcsicmp(procentry.szExeFile, L"LogonUI.exe")) {
+				bLocked = true;
+				break;
+			}
+		} while (Process32NextW(hSnap, &procentry));
+	}
 
-	HDESK hDesk;
+	/*HDESK hDesk;
 	BOOL bRes;
 	DWORD dwLen;
 	char sName[200];
@@ -410,7 +425,7 @@ BOOL vncService::IsWSLocked()
 			 bLocked = false ;
 	}
 	if (hDesk != NULL)
-		CloseDesktop(hDesk);
+		CloseDesktop(hDesk);*/
 
 	return bLocked;
 }

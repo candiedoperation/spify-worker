@@ -28,6 +28,8 @@
 // virtual keycodes.  Now it actually does the local-end simulation of
 // key presses, to keep this messy code on one place!
 #pragma warning(disable : 4786)
+#include <stdlib.h>
+#include "vncservice.h"
 #include "vnckeymap.h"
 #include <windows.h>
 #include <rdr/types.h>

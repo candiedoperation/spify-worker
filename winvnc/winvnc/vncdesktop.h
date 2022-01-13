@@ -234,6 +234,7 @@ public:
 	DWORD color[10];
 	// added jeff
 	void SetBlankMonitor(bool enabled);
+	void SetBorderWindow(bool enabled, RECT rect);
 	// Modif rdv@2002 Dis/enable input
 	void SetDisableInput();
 	void SetSW(int x,int y);
@@ -273,6 +274,7 @@ public:
 	ScreenCapture *m_screenCapture;
 	// Screen info
 	rfbServerInitMsg	m_scrinfo;
+	void requestMouseShapeUpdate();
 protected:
 
 	// Routines to hook and unhook us

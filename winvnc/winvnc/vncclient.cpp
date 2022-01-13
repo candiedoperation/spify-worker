@@ -636,7 +636,7 @@ vncClientUpdateThread::run_undetached(void *arg)
 						// since Unix won't like it
 						int unixpos=0;
                         size_t cliplen=strlen(cliptext);
-						for (int x=0; x<cliplen; x++) {
+						for (unsigned int x=0; x<cliplen; x++) {
 							if (cliptext[x] != '\x0d') {
 								unixtext[unixpos] = cliptext[x];
 								unixpos++;
@@ -867,13 +867,9 @@ vncClientThread::InitVersion()
 #endif
 
 #ifdef AUTH_ULTRA_SUPPORT
-	// adzm 2010-09 - see rfbproto.h for more discussion on all this
-	m_client->SetUltraViewer(false); // sf@2005 - Fix Open TextChat from server bug 
-	// UltraViewer will be set when viewer responds with rfbUltraVNC Auth type
-	// RDV 2010-6-10 
-	// removed SPECIAL_SC_PROMPT
+	m_client->SetUltraViewer(false);
 #endif
-	
+
 #ifdef DSM_SUPPORT
 	if ( (m_minor >= 7) && m_socket->IsUsePluginEnabled() && m_server->GetDSMPluginPointer()->IsEnabled() && m_socket->GetIntegratedPlugin() != NULL) {
 		m_socket->SetPluginStreamingIn();
@@ -953,7 +949,7 @@ vncClientThread::FilterClients_Ask_Permission()
 					//m_queryaccept==2, new method to allow accept on locked user
 					verified = vncServer::aqrAccept;
             } else {
-				vncAcceptDialog *acceptDlg = new vncAcceptDialog(m_server->QueryTimeout(),m_server->QueryAccept(), m_socket->GetPeerName());
+				vncAcceptDialog *acceptDlg = new vncAcceptDialog(m_server->QueryTimeout(),m_server->QueryAccept(), m_socket->GetPeerName(), m_client->infoMsg, m_server->m_Notification);
 				if (acceptDlg == NULL) {
 					if (m_server->QueryAccept()==1) 
 						verified = vncServer::aqrAccept;
@@ -1263,6 +1259,8 @@ BOOL vncClientThread::AuthenticateClient(std::vector<CARD8>& current_auth)
 		// send the UltraVNC auth type to identify ourselves as an UltraVNC server, but only initially
 		auth_types.push_back(rfbUltraVNC);
 	}
+	//Just tell the viewer we support ClientInitExtraMsg
+	auth_types.push_back(rfbClientInitExtraMsgSupport);
 #endif
 
 #ifdef DSM_SUPPORT
@@ -1393,6 +1391,12 @@ BOOL vncClientThread::AuthenticateClient(std::vector<CARD8>& current_auth)
 		auth_success = AuthSessionSelect(auth_message);
 		break;
 #endif
+#ifdef AUTH_ULTRA_SUPPORT
+	case rfbClientInitExtraMsgSupport:
+		auth_success = true;
+		break;
+#endif
+
 	default:
 		auth_success = FALSE;
 		break;
@@ -1423,6 +1427,17 @@ BOOL vncClientThread::AuthenticateClient(std::vector<CARD8>& current_auth)
 #ifdef AUTH_SESSION_SELECT_SUPPORT
 		} else if (bUseSessionSelect && !bSessionSelectActive) {
 			auth_result = rfbVncAuthContinue;
+#endif
+#ifdef AUTH_ULTRA_SUPPORT
+		} else if (auth_accepted == rfbClientInitExtraMsgSupport) {
+			auth_result = rfbVncAuthContinue;
+			rfbClientInitExtraMsg msg;
+			if (!m_socket->ReadExact((char*)&msg, sz_rfbClientInitExtraMsg))
+				return FALSE;
+			if (msg.textLength < 0 || msg.textLength > 254)
+				return FALSE;
+			if (!m_socket->ReadExact(m_client->infoMsg, msg.textLength))
+				return FALSE;			
 #endif
 		} else {
 			auth_result = rfbVncAuthOK;
@@ -2325,23 +2340,7 @@ vncClientThread::run(void *arg)
 
 	// GET PROTOCOL VERSION
 	if (!InitVersion())
-	{
-		// adzm 2009-07-05
-		{
-			char szInfo[256];
-
-			if (m_client->GetRepeaterID() && (strlen(m_client->GetRepeaterID()) > 0) ) {
-				_snprintf_s(szInfo, 255, "Could not connect using %s!", m_client->GetRepeaterID());
-			} else {
-				_snprintf_s(szInfo, 255, "Could not connect to %s!", m_client->GetClientName());
-			}
-
-			szInfo[255] = '\0';
-
-#ifndef ULTRAVNC_VEYON_SUPPORT
-			if (m_client->m_outgoing) vncMenu::NotifyBalloon(szInfo, NULL);
-#endif
-		}
+	{		
 #ifndef ULTRAVNC_VEYON_SUPPORT
 		// wa@2005 - AutoReconnection attempt if required
 		if (m_client->m_Autoreconnect && !fShutdownOrdered)
@@ -2729,6 +2728,7 @@ vncClientThread::run(void *arg)
 			// Tight - CURSOR HANDLING
 			m_client->m_encodemgr.EnableXCursor(FALSE);
 			m_client->m_encodemgr.EnableRichCursor(FALSE);
+			m_client->m_use_PointerPos = FALSE;
 			m_server->EnableXRichCursor(FALSE);
 			m_client->m_cursor_update_pending = FALSE;
 			m_client->m_cursor_update_sent = FALSE;
@@ -2849,16 +2849,16 @@ vncClientThread::run(void *arg)
 					if (Swap32IfLE(encoding) == rfbEncodingXCursor) {
 						m_client->m_encodemgr.EnableXCursor(TRUE);
 						m_server->EnableXRichCursor(TRUE);
-						m_client->m_encodemgr.m_buffer->m_cursor_shape_cleared = TRUE;
+						m_client->m_encodemgr.m_buffer->m_desktop->requestMouseShapeUpdate();
 						vnclog.Print(LL_INTINFO, VNCLOG("X-style cursor shape updates enabled\n"));
 						continue;
 					}
 
 					// Is this a RichCursor encoding request?
 					if (Swap32IfLE(encoding) == rfbEncodingRichCursor) {
-						m_client->m_encodemgr.EnableRichCursor(TRUE);
-						m_client->m_encodemgr.m_buffer->m_cursor_shape_cleared = TRUE;
+						m_client->m_encodemgr.EnableRichCursor(TRUE);						
 						m_server->EnableXRichCursor(TRUE);
+						m_client->m_encodemgr.m_buffer->m_desktop->requestMouseShapeUpdate();
 						vnclog.Print(LL_INTINFO, VNCLOG("Full-color cursor shape updates enabled\n"));
 						continue;
 					}
@@ -2975,6 +2975,16 @@ vncClientThread::run(void *arg)
 
 						m_client->cl_connected = FALSE;
 					}
+				}
+
+				// If PointerPos not supported use framebuffr drawing
+				if (!m_client->m_use_PointerPos) {
+					m_client->m_encodemgr.EnableXCursor(FALSE);
+					m_client->m_encodemgr.EnableRichCursor(FALSE);
+					m_client->m_use_PointerPos = FALSE;
+					m_server->EnableXRichCursor(FALSE);
+					m_client->m_cursor_update_pending = FALSE;
+					m_client->m_cursor_update_sent = FALSE;
 				}
 
 				// sf@2002 - For now we disable cache protocole when more than one client are connected
@@ -3190,7 +3200,7 @@ vncClientThread::run(void *arg)
 						if (contact == NULL)  goto mydllend;
 						memset(contact, 0, sizeof(POINTER_TOUCH_INFO) * rfbGIIValutorEvent.first);
 
-						for (int i = 0; i < rfbGIIValutorEvent.first; i++)
+						for (unsigned int i = 0; i < rfbGIIValutorEvent.first; i++)
 						{
 							contact[i].pointerInfo.pointerType = PT_TOUCH; //we're sending touch input		
 							contact[i].pointerInfo.ptPixelLocation.x = ti_array[i].X;

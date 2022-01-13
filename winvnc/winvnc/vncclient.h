@@ -232,8 +232,16 @@ public:
 	virtual omni_mutex& GetUpdateLock() {return m_encodemgr.GetUpdateLock();};
 
 	// Functions for setting & getting the client settings
-	virtual void EnableKeyboard(BOOL enable) {m_keyboardenabled = enable;};
-	virtual void EnablePointer(BOOL enable) {m_pointerenabled = enable;};
+	virtual void EnableKeyboard(BOOL enable) 
+	{
+		if (m_keyboardenabled == true)
+			m_keyboardenabled = enable;
+	};
+	virtual void EnablePointer(BOOL enable) 
+	{
+		if (m_pointerenabled == true)
+			m_pointerenabled = enable;
+	};
 	virtual void EnableJap(bool enable) {m_jap = enable;};
 	virtual void EnableUnicode(bool enable) {m_unicode = enable;};
 	virtual void SetCapability(int capability) {m_capability = capability;};
@@ -381,6 +389,7 @@ public:
 	HANDLE ThreadHandleCompressFolder;
 	// sf@2002 
 	// Update routines
+	char infoMsg[255] = { 0 };
 protected:
 	BOOL SendUpdate(rfb::SimpleUpdateTracker &update);
 	BOOL SendRFBMsg(CARD8 type, BYTE *buffer, int buflen);
@@ -509,9 +518,9 @@ protected:
 	bool has_mouse;
 	SimulateCursor* simulateCursor;
 	// Per-client settings
-	BOOL			m_IsLoopback;
-	BOOL			m_keyboardenabled;
-	BOOL			m_pointerenabled;
+	bool			m_IsLoopback;
+	bool			m_keyboardenabled = true;
+	bool			m_pointerenabled = true;
 	bool			m_jap;
 	bool			m_unicode;
 	int				m_capability;

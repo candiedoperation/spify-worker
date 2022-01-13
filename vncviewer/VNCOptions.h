@@ -124,7 +124,7 @@ public:
 	bool	m_extendDisplay;
 	bool	m_showExtend;
 	bool	m_use_virt;
-	bool	m_use_allmonitors;
+	bool	m_useAllMonitors;
 	int		m_requestedWidth;
 	int		m_requestedHeight;
 
@@ -161,8 +161,9 @@ public:
 	bool m_running;
 
 	TCHAR m_optionfile[MAX_PATH];
-	void VNCOptions::setDefaultOptionsFileName();
-	TCHAR* VNCOptions::getDefaultOptionsFileName();
+	void setDefaultOptionsFileName();
+	TCHAR* getDefaultOptionsFileName();
+	char m_InfoMsg[255]{ 0 };
 
 private:
 	void ShowUsage(LPTSTR info = NULL);
@@ -171,4 +172,4 @@ private:
 	HWND hwnd;
 };
 
-#endif VNCOPTIONS_H__
+#endif //VNCOPTIONS_H__

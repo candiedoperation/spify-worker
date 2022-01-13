@@ -842,6 +842,8 @@ vncDesktop::Shutdown()
 #endif	
 	ShutdownInitWindowthread();
 
+	RECT rect{};
+	SetBorderWindow(0, rect);
 	// Now free all the bitmap stuff
 	if (m_hrootdc_Desktop != NULL)
 	{
@@ -1058,15 +1060,35 @@ vncDesktop::InitBitmap()
         m_old_monitor = m_current_monitor;
     }
 
-	if (VideoBuffer())
+	RECT rect;
+
+	if (VideoBuffer()) {
 		SetBitmapRectOffsetAndClipRect(mymonitor[MULTI_MON_ALL].offsetx, mymonitor[MULTI_MON_ALL].offsety, mymonitor[MULTI_MON_ALL].Width, mymonitor[MULTI_MON_ALL].Height);
-	else if (show_all_monitors) 
+		rect.left = mymonitor[MULTI_MON_ALL].offsetx;
+		rect.right = rect.left + mymonitor[MULTI_MON_ALL].Width;
+		rect.top = mymonitor[MULTI_MON_ALL].offsetx;
+		rect.bottom = rect.top + mymonitor[MULTI_MON_ALL].Height;
+	}
+	else if (show_all_monitors) {
 		SetBitmapRectOffsetAndClipRect(0, 0, mymonitor[MULTI_MON_ALL].Width, mymonitor[MULTI_MON_ALL].Height);
-	else
+		rect.left =0;
+		rect.right = rect.left + mymonitor[MULTI_MON_ALL].Width;
+		rect.top = 0;
+		rect.bottom = rect.top + mymonitor[MULTI_MON_ALL].Height;
+	}
+	else {
 		SetBitmapRectOffsetAndClipRect(0, 0, mymonitor[MULTI_MON_PRIMARY].Width, mymonitor[MULTI_MON_PRIMARY].Height);
+		rect.left = 0;
+		rect.right = rect.left + mymonitor[MULTI_MON_PRIMARY].Width;
+		rect.top = 0;
+		rect.bottom = rect.top + mymonitor[MULTI_MON_PRIMARY].Height;
+	}
 	
 
 	vnclog.Print(LL_INTINFO, VNCLOG("bitmap dimensions are %d x %d\n"), m_bmrect.br.x, m_bmrect.br.y);
+
+	if (m_server->getFrame())
+		SetBorderWindow(true, rect);
 
 	// Create a compatible memory DC
 	m_hmemdc = CreateCompatibleDC(m_hrootdc_Desktop);
@@ -2520,7 +2542,7 @@ void vncDesktop::SetBlockInputState(bool newstate)
 #endif
 		}
 		m_bIsInputDisabledByClient = newstate;
-		state = !block_input(false);
+		state = !newstate; ;// !block_input(false);
 
 	}
 	else state = !newstate;
@@ -2585,4 +2607,9 @@ bool vncDesktop::block_input(bool first)
 		old_Blockinput = Blockinput_val;
 		return Blockinput_val;
 	}
+}
+
+void vncDesktop::requestMouseShapeUpdate()
+{
+	PostMessage(m_hwnd, WM_REQUESTMOUSESHAPE, 0, 0);
 }

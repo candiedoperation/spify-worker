@@ -1421,6 +1421,8 @@ void ClientConnection::CreateDisplay()
 		AppendMenu(hsysmenu, MF_STRING, ID_TEXTCHAT,	sz_L17);
 		AppendMenu(hsysmenu, MF_SEPARATOR, NULL, NULL);
 		AppendMenu(hsysmenu, MF_STRING, ID_DBUTTON,	sz_L18);
+		AppendMenu(hsysmenu, MF_SEPARATOR, NULL, NULL);
+		AppendMenu(hsysmenu, MF_STRING, ID_SW, "Take Snapshot  \tCtrl+Alt+Shift+S");
 		// AppendMenu(hsysmenu, MF_STRING, ID_BUTTON,	_T("Show Toolbar Buttons"));
 		AppendMenu(hsysmenu, MF_SEPARATOR, NULL, NULL);
 		AppendMenu(hsysmenu, MF_STRING, ID_DINPUT,	sz_L19); // disable remote input
@@ -2832,6 +2834,7 @@ void ClientConnection::Authenticate(std::vector<CARD32>& current_auth)
 				case rfbUltraVNC_SecureVNCPluginAuth:
 				case rfbUltraVNC_SecureVNCPluginAuth_new:
 				case rfbUltraVNC_SCPrompt: // adzm 2010-10
+				case rfbClientInitExtraMsgSupport:
 				case rfbUltraVNC_SessionSelect:
 				case rfbUltraVNC_MsLogonIIAuth:
 				case rfbVncAuth:
@@ -2847,6 +2850,7 @@ void ClientConnection::Authenticate(std::vector<CARD32>& current_auth)
 				auth_priority.push_back(rfbUltraVNC_SecureVNCPluginAuth_new);
 				auth_priority.push_back(rfbUltraVNC_SecureVNCPluginAuth);				
 				auth_priority.push_back(rfbUltraVNC_SCPrompt); // adzm 2010-10
+				auth_priority.push_back(rfbClientInitExtraMsgSupport);
 				auth_priority.push_back(rfbUltraVNC_SessionSelect);
 				auth_priority.push_back(rfbUltraVNC_MsLogonIIAuth);
 				auth_priority.push_back(rfbVncAuth);
@@ -2866,6 +2870,14 @@ void ClientConnection::Authenticate(std::vector<CARD32>& current_auth)
 
 			CARD8 authSchemeMsg = (CARD8)authScheme;
 			WriteExact((char *)&authSchemeMsg, sizeof(authSchemeMsg));
+			if (authScheme == rfbClientInitExtraMsgSupport) {
+				rfbClientInitExtraMsg msg;
+				msg.textLength = strlen(m_opts.m_InfoMsg);
+				WriteExact((char*)&msg, sz_rfbClientInitExtraMsg);
+				if (strlen(m_opts.m_InfoMsg) > 0) {					
+					WriteExact(m_opts.m_InfoMsg, msg.textLength);
+				}
+			}
 		}
 	}
 
@@ -2955,6 +2967,8 @@ void ClientConnection::AuthenticateServer(CARD32 authScheme, std::vector<CARD32>
 	case rfbUltraVNC_SCPrompt:
 		AuthSCPrompt();
 		break;
+	case rfbClientInitExtraMsgSupport:
+		break;
 	case rfbUltraVNC_SessionSelect:
 		AuthSessionSelect();
 		break;
@@ -2962,7 +2976,7 @@ void ClientConnection::AuthenticateServer(CARD32 authScheme, std::vector<CARD32>
 		if (m_hwndStatus)SetDlgItemText(m_hwndStatus,IDC_STATUS,sz_L92);
 		vnclog.Print(0, _T("No authentication needed\n"));
 
-		if (!m_Is_Listening && MessageBox(m_hwndMain, "The Server has been setup without authentication, do you thrust this server?", "Accept server without authentification", MB_YESNO | MB_ICONEXCLAMATION | MB_TOPMOST) == IDNO)
+		if (!m_Is_Listening && MessageBox(m_hwndMain, "The Server has been setup without authentication, do you trust this server?", "Accept server without authentification", MB_YESNO | MB_ICONEXCLAMATION | MB_TOPMOST) == IDNO)
 		{
 			throw WarningException("You refused a untrusted server.");
 		}
@@ -3604,9 +3618,9 @@ void ClientConnection::AuthSessionSelect()
 
 void ClientConnection::SendClientInit()
 {
-    rfbClientInitMsg ci;
+    rfbClientInitMsg ci{};
 	// adzm 2010-09
-	ci.flags = 0;
+	ci.flags = clientInitNotShare;
 	if (m_opts.m_Shared) {
 		ci.flags |= clientInitShared;
 	}
@@ -3638,7 +3652,10 @@ void ClientConnection::ReadServerInit(bool reconnect)
     m_desktopName = new TCHAR[1024];
 	m_desktopName_viewonly = new TCHAR[1024];
 	if (m_si.nameLength > 256) {
-		  MessageBox(NULL,"Server tried to overload buffer, name to long","Error",MB_OK|MB_ICONINFORMATION);
+		int msgboxID = MessageBox(NULL,"Server is trying yo overload a memory buffer.\Possible exploit","Error", MB_OKCANCEL |MB_ICONINFORMATION);
+		if (msgboxID == IDCANCEL)
+			exit;
+		m_si.nameLength = 256;
 	}
     ReadString(m_desktopName, m_si.nameLength);
 	strcat_s(m_desktopName, 1024, " ");
@@ -7131,7 +7148,7 @@ void ClientConnection::SendMonitorSizes()
 		flag = 1;
 	if (m_opts.m_extendDisplay)
 		flag = 2;
-	if (m_opts.m_extendDisplay && m_opts.m_showExtend && !m_opts.m_use_allmonitors)
+	if (m_opts.m_extendDisplay && m_opts.m_showExtend && !m_opts.m_useAllMonitors)
 		flag = 3;
 	
 	rfbSetDesktopSizeMsg sdmz;
@@ -7140,7 +7157,7 @@ void ClientConnection::SendMonitorSizes()
 	if (desktopsize_requested) {	
 		desktopsize_requested = false;
 		tdc.Init();
-		if (m_opts.m_use_allmonitors) {
+		if (m_opts.m_useAllMonitors) {
 			sdmz.numberOfScreens = tdc.nr_monitors;
 			sdmz.height = tdc.monarray[0].height;
 			sdmz.width = tdc.monarray[0].width;
@@ -9600,6 +9617,8 @@ ClientConnection:: ConvertPixel_to_bpp_from_32(int xx, int yy,int bytes_per_pixe
 void
 ClientConnection::SolidColor(int width, int height, int xx, int yy,int bytes_per_pixel,BYTE* source,BYTE* dest,int framebufferWidth)
 {
+	if (!Check_Rectangle_borders(xx, yy, width, height))
+		return;
 	int bytesPerOutputRow = framebufferWidth * bytes_per_pixel;
 	//8bit pitch need to be taken in account
 	if (bytesPerOutputRow % 4)

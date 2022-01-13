@@ -274,6 +274,9 @@ vncServer::vncServer()
 	DriverWanted = FALSE;
 	HookWanted = FALSE;
 	DriverWantedSet = FALSE;
+	m_Frame = FALSE;
+	m_Notification = FALSE;
+	m_NotificationSelection = 0;
 }
 
 vncServer::~vncServer()
@@ -613,7 +616,7 @@ vncClientId vncServer::AddClient(VSocket *socket,
 		if (m_unauthClients.size() > 0) {
 			szInfo[strlen(szInfo) - 2] = '\0';
 #ifndef ULTRAVNC_VEYON_SUPPORT
-			vncMenu::NotifyBalloon(szInfo, NULL);
+			vncMenu::NotifyBalloon(szInfo);
 #endif
 		}		
 	}
@@ -740,22 +743,48 @@ vncServer::Authenticated(vncClientId clientid)
 	// Notify anyone interested of this event
 	DoNotify(WM_SRV_CLIENT_AUTHENTICATED, 0, 0);
 
-	// adzm 2009-07-05 - Balloon
-	if (SPECIAL_SC_PROMPT && (client != NULL) ) {
-		char szInfo[256];
-
-		if (client->GetRepeaterID() && (strlen(client->GetRepeaterID()) > 0) ) {
-			_snprintf_s(szInfo, 255, "Remote user successfully connected (%s) and is currently sharing your desktop.", client->GetRepeaterID());
-		} else {
-			_snprintf_s(szInfo, 255, "Remote user successfully connected (%s) and is currently sharing your desktop.", client->GetClientName());
+#ifndef ULTRAVNC_VEYON_SUPPORT
+	if (client != NULL) {
+		// adzm 2009-07-05 - Balloon
+		if (SPECIAL_SC_PROMPT) {
+			char szInfo[256] = { 0 };
+				if (client->GetRepeaterID() && (strlen(client->GetRepeaterID()) > 0)) {
+					_snprintf_s(szInfo, 255, "UltraVNC is controling your device. \r Remote access from ID: %s", client->GetRepeaterID());
+				}
+				else {
+					_snprintf_s(szInfo, 255, "UltraVNC is controling your device. \r Remote access from ip address %s", client->GetClientName());
+				}
+			vncMenu::NotifyBalloon(szInfo);
 		}
 
-		szInfo[255] = '\0';
+		if (m_Notification) {
 
-#ifndef ULTRAVNC_VEYON_SUPPORT
-		vncMenu::NotifyBalloon(szInfo, NULL);
-#endif
+			if (strlen(client->infoMsg) > 0) {
+				char szInfo[256] = { 0 };
+				char szTitle[63] = { 0 };
+				if (client->GetRepeaterID() && (strlen(client->GetRepeaterID()) > 0)) {
+					_snprintf_s(szTitle, 255, "Connection from: %s", client->GetRepeaterID());
+				}
+				else {
+					_snprintf_s(szTitle, 255, "Connection from: %s", client->GetClientName());
+				}
+				strcpy_s(szInfo, 255, client->infoMsg);
+				vncMenu::NotifyBalloon(szInfo, szTitle);
+			}
+			else if (m_NotificationSelection == 0) {
+				char szInfo[256] = { 0 };
+				if (client->GetRepeaterID() && (strlen(client->GetRepeaterID()) > 0)) {
+					_snprintf_s(szInfo, 255, "UltraVNC is controling your device. \r Remote access from ID: %s", client->GetRepeaterID());
+				}
+				else {
+					_snprintf_s(szInfo, 255, "UltraVNC is controling your device. \r Remote access from ip address %s", client->GetClientName());
+				}
+				vncMenu::NotifyBalloon(szInfo);
+			}
+
+		}
 	}
+#endif
 
 	vnclog.Print(LL_INTINFO, VNCLOG("Authenticated() done\n"));
 
@@ -1198,26 +1227,6 @@ vncServer::SetCapability(vncClientId clientid, int capability)
 	vncClient *client = GetClient(clientid);
 	if (client != NULL)
 		client->SetCapability(capability);
-}
-
-void
-vncServer::SetKeyboardEnabled(vncClientId clientid, BOOL enabled)
-{
-	omni_mutex_lock l(m_clientsLock,36);
-
-	vncClient *client = GetClient(clientid);
-	if (client != NULL)
-		client->EnableKeyboard(enabled);
-}
-
-void
-vncServer::SetPointerEnabled(vncClientId clientid, BOOL enabled)
-{
-	omni_mutex_lock l(m_clientsLock,37);
-
-	vncClient *client = GetClient(clientid);
-	if (client != NULL)
-		client->EnablePointer(enabled);
 }
 
 int
@@ -2847,7 +2856,7 @@ short vncServer::getOldestViewer()
 	return clientId;
 }
 
-int vncServer::getNumberViewers()
+UINT vncServer::getNumberViewers()
 {
 	return  m_authClients.size();
 }

@@ -51,6 +51,7 @@
 #include "common/win32_helpers.h"
 #include <algorithm>
 #include <commctrl.h>
+#include "LayeredWindows.h"
 
 extern bool PreConnect;
 int getinfo(char mytext[1024]);
@@ -548,6 +549,8 @@ vncDesktop::vncDesktop()
 	}
 	m_SWOffsetx = 0;
 	m_SWOffsety = 0;
+
+	layeredWindows = new LayeredWindows();
 }
 
 vncDesktop::~vncDesktop()
@@ -635,6 +638,7 @@ vncDesktop::~vncDesktop()
 	}
 	if (sesmsg) delete[] sesmsg;
 	sesmsg = NULL;
+	delete layeredWindows;
 }
 
 
@@ -844,7 +848,7 @@ vncDesktop::Shutdown()
 
 	RECT rect{};
 #ifndef ULTRAVNC_VEYON_SUPPORT
-	SetBorderWindow(0, rect);
+	layeredWindows->SetBorderWindow(0, rect, "", false);
 #endif
 	// Now free all the bitmap stuff
 	if (m_hrootdc_Desktop != NULL)
@@ -1091,7 +1095,7 @@ vncDesktop::InitBitmap()
 
 #ifndef ULTRAVNC_VEYON_SUPPORT
 	if (m_server->getFrame())
-		SetBorderWindow(true, rect);
+		layeredWindows->SetBorderWindow(true, rect, m_server->getInfoMsg(), m_server->getOSD());
 #endif
 
 	// Create a compatible memory DC
@@ -2535,12 +2539,12 @@ void vncDesktop::SetBlockInputState(bool newstate)
 #ifndef ULTRAVNC_VEYON_SUPPORT
 			if ((blankmonitorstate == newstate) && (newstate == 1))
 			{
-				SetBlankMonitor(0);
+				m_Black_window_active = layeredWindows->SetBlankMonitor(0, m_server->BlankMonitorEnabled(), m_Black_window_active);
 				blankmonitorstate = 0;
 			}
 			else
 			{
-				SetBlankMonitor(newstate);
+				m_Black_window_active = layeredWindows->SetBlankMonitor(newstate, m_server->BlankMonitorEnabled(), m_Black_window_active);
 				blankmonitorstate = newstate;
 			}
 #endif

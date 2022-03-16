@@ -276,6 +276,7 @@ vncServer::vncServer()
 	DriverWantedSet = FALSE;
 	m_Frame = FALSE;
 	m_Notification = FALSE;
+	m_OSD = FALSE;
 	m_NotificationSelection = 0;
 }
 
@@ -694,10 +695,12 @@ vncServer::Authenticated(vncClientId clientid)
 
 			//If we are the only client, we give it mouse access.
 			//Other client can take access when the click a mouse button
-			if (m_authClients.size() == 1)
-				client->SetHasMouse(true);
-			else
-				client->SetHasMouse(false);
+			if (getCollabo()) {
+				if (m_authClients.size() == 1)
+					client->SetHasMouse(true);
+				else
+					client->SetHasMouse(false);
+			}
 
 
 			// Create the screen handler if necessary
@@ -2826,6 +2829,23 @@ void vncServer::StopReconnectAll()
 	}
 }
 
+#ifndef ULTRAVNC_VEYON_SUPPORT
+char *vncServer::getInfoMsg()
+{
+	vncClient* client = NULL;
+
+	vncClientList::iterator i;
+
+	for (i = m_authClients.begin(); i != m_authClients.end(); i++)
+	{
+		// Is this the right client?
+		if (strlen(GetClient(*i)->infoMsg) > 0)
+			return GetClient(*i)->infoMsg;
+	}
+	return "";
+}
+#endif
+
 void vncServer::SetFTTimeout(int msecs)
 {
     m_ftTimeout = msecs;
@@ -2860,3 +2880,13 @@ UINT vncServer::getNumberViewers()
 {
 	return  m_authClients.size();
 }
+
+BOOL vncServer::getOSD() 
+{ 
+	return m_OSD; 
+};
+
+void vncServer::setOSD(const BOOL setting) 
+{ 
+	m_OSD = setting; 
+};

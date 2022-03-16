@@ -45,6 +45,7 @@
 #endif
 
 #include "Localization.h" // ACT : Add localization on messages
+#include "shlwapi.h"
 
 //extern HINSTANCE g_hInst;
 
@@ -483,7 +484,10 @@ vncProperties::DialogProc(HWND hwnd,
 		   
 		   HWND hBlank = GetDlgItem(hwnd, IDC_BLANK);
            SendMessage(hBlank, BM_SETCHECK, _this->m_server->BlankMonitorEnabled(), 0);
-
+		   if (!VNC_OSVersion::getInstance()->OS_WIN10_TRANS && VNC_OSVersion::getInstance()->OS_WIN10)
+			   SetDlgItemText(hwnd, IDC_BLANK, "Enable Blank Monitor on Viewer Request require Min Win10 build 19041 ");
+		   if (VNC_OSVersion::getInstance()->OS_WIN8)
+			   SetDlgItemText(hwnd, IDC_BLANK, "Enable Blank Monitor on Viewer Not supported on windows 8 ");
 		   HWND hBlank2 = GetDlgItem(hwnd, IDC_BLANK2); //PGM
            SendMessage(hBlank2, BM_SETCHECK, _this->m_server->BlankInputsOnly(), 0); //PGM
 		   
@@ -710,6 +714,12 @@ vncProperties::DialogProc(HWND hwnd,
 				_this->m_server->getNotification(),
 				0);
 
+			hwndDlg = GetDlgItem(hwnd, IDC_OSD);
+			SendMessage(hwndDlg,
+				BM_SETCHECK,
+				_this->m_server->getOSD(),
+				0);
+
 			char maxviewersChar[128];
 			UINT maxviewers = _this->m_server->getMaxViewers();
 			sprintf_s(maxviewersChar, "%d", (int)maxviewers);
@@ -729,7 +739,7 @@ vncProperties::DialogProc(HWND hwnd,
 
 			// Modif sf@2002
 			SendMessage(GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_SETCHECK, _this->m_server->IsDSMPluginEnabled(), 0);
-			EnableWindow(GetDlgItem(hwnd, IDC_PLUGIN_BUTTON), _this->m_server->IsDSMPluginEnabled());
+			EnableWindow(GetDlgItem(hwnd, IDC_PLUGIN_BUTTON),  (_this->m_server->AuthClientCount() == 0 ? _this->m_server->IsDSMPluginEnabled(): false));
 #endif
 
 			// Query window option - Taken from TightVNC advanced properties 
@@ -986,6 +996,11 @@ vncProperties::DialogProc(HWND hwnd,
 
 				hwndDlg = GetDlgItem(hwnd, IDC_NOTIFOCATION);
 				_this->m_server->setNotification(
+					SendMessage(hwndDlg, BM_GETCHECK, 0, 0) == BST_CHECKED
+				);
+
+				hwndDlg = GetDlgItem(hwnd, IDC_OSD);
+				_this->m_server->setOSD(
 					SendMessage(hwndDlg, BM_GETCHECK, 0, 0) == BST_CHECKED
 				);
 
@@ -1293,8 +1308,9 @@ vncProperties::DialogProc(HWND hwnd,
 		// sf@2002 - DSM Plugin
 		case IDC_PLUGIN_CHECK:
 			{
-				EnableWindow(GetDlgItem(hwnd, IDC_PLUGIN_BUTTON),
-					SendMessage(GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED);
+				EnableWindow(GetDlgItem(hwnd, IDC_PLUGIN_BUTTON), _this->m_server->AuthClientCount() == 0 
+						? SendMessage(GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED 
+						: BST_UNCHECKED);
 			}
 			return TRUE;
 			// Marscha@2004 - authSSP: moved MSLogon checkbox back to admin props page
@@ -1377,6 +1393,8 @@ vncProperties::DialogProc(HWND hwnd,
 				{
 					TCHAR szPlugin[MAX_PATH];
 					GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin, MAX_PATH);
+					PathStripPathA(szPlugin);
+
 					if (!_this->m_server->GetDSMPluginPointer()->IsLoaded())
 						_this->m_server->GetDSMPluginPointer()->LoadPlugin(szPlugin, false);
 					else
@@ -1849,6 +1867,7 @@ LABELUSERSETTINGS:
 
 	m_pref_Frame = FALSE;
 	m_pref_Notification = FALSE;
+	m_pref_OSD = FALSE;
 	m_pref_NotificationSelection = 0;
 
 	m_pref_EnableRemoteInputs=TRUE;
@@ -2013,6 +2032,8 @@ vncProperties::LoadUserPrefs(HKEY appkey)
 	m_server->setFrame(m_pref_Frame);
 	m_pref_Notification = LoadInt(appkey, "Notification", m_pref_Notification);
 	m_server->setNotification(m_pref_Notification);
+	m_pref_OSD = LoadInt(appkey, "OSD", m_pref_OSD);
+	m_server->setOSD(m_pref_OSD);
 	m_pref_NotificationSelection = LoadInt(appkey, "NotificationSelection", m_pref_NotificationSelection);
 	m_server->setNotificationSelection(m_pref_NotificationSelection);
 	
@@ -2061,6 +2082,7 @@ vncProperties::ApplyUserPrefs()
 
 	m_server->setFrame(m_pref_Frame);
 	m_server->setNotification(m_pref_Notification);
+	m_server->setOSD(m_pref_OSD);
 	m_server->setNotificationSelection(m_pref_NotificationSelection);
 
 	m_server->SetAutoIdleDisconnectTimeout(m_pref_IdleTimeout);
@@ -2344,6 +2366,7 @@ vncProperties::SaveUserPrefs(HKEY appkey)
 	SaveInt(appkey, "Collabo", m_server->getCollabo());
 	SaveInt(appkey, "Frame", m_server->getFrame());
 	SaveInt(appkey, "Notification", m_server->getNotification());
+	SaveInt(appkey, "OSD", m_server->getOSD());
 	SaveInt(appkey, "NotificationSelection", m_server->getNotificationSelection());
 
 
@@ -2490,6 +2513,7 @@ void vncProperties::LoadFromIniFile()
 
 	m_pref_Frame = FALSE;
 	m_pref_Notification = FALSE;
+	m_pref_OSD = FALSE;
 	m_pref_NotificationSelection = 0;
 
 	m_pref_RemoveWallpaper=FALSE;
@@ -2601,6 +2625,9 @@ void vncProperties::LoadUserPrefsFromIniFile()
 	m_server->setFrame(m_pref_Frame);
 	m_pref_Notification = myIniFile.ReadInt("admin", "Notification", m_pref_Notification);
 	m_server->setNotification(m_pref_Notification);
+
+	m_pref_OSD = myIniFile.ReadInt("admin", "OSD", m_pref_OSD);
+	m_server->setOSD(m_pref_OSD);
 	m_pref_NotificationSelection = myIniFile.ReadInt("admin", "NotificationSelection", m_pref_NotificationSelection);
 	m_server->setNotificationSelection(m_pref_NotificationSelection);
 
@@ -2770,6 +2797,7 @@ void vncProperties::SaveUserPrefsToIniFile()
 	myIniFile.WriteInt("admin", "Collabo", m_server->getCollabo());
 	myIniFile.WriteInt("admin", "Frame", m_server->getFrame());
 	myIniFile.WriteInt("admin", "Notification", m_server->getNotification());
+	myIniFile.WriteInt("admin", "OSD", m_server->getOSD());
 	myIniFile.WriteInt("admin", "NotificationSelection", m_server->getNotificationSelection());
 	// Lock settings
 	myIniFile.WriteInt("admin", "LockSetting", m_server->LockSettings());

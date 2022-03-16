@@ -70,6 +70,7 @@ VNC_OSVersion::VNC_OSVersion()
 	OS_WIN10=false;
 	OS_NOTSUPPORTED=false;
 	OS_BEFOREVISTA = false;
+	OS_WIN10_TRANS = false;
 	OSVERSIONINFO OSversion;	
 	OSversion.dwOSVersionInfoSize=sizeof(OSVERSIONINFO);
 	GetVersionEx(&OSversion);
@@ -92,6 +93,19 @@ VNC_OSVersion::VNC_OSVersion()
 								break;
 	}
 
+	OS_MINIMUMVISTA = !OS_BEFOREVISTA;
+
+	if (OS_WIN8)
+	{
+		RTL_OSVERSIONINFOW rTL_OSVERSIONINFOW;
+		rTL_OSVERSIONINFOW = GetRealOSVersion();
+		if (rTL_OSVERSIONINFOW.dwMajorVersion == 10) {
+			OS_WIN8 = false;
+			OS_WIN10 = true;
+			if (rTL_OSVERSIONINFOW.dwBuildNumber >= 19041)
+				OS_WIN10_TRANS = true;
+		}
+	}
 	LoadDM();
 }
 
